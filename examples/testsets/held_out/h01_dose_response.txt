@@ -1,0 +1,1 @@
+Catalyst dose response, please: 0.5, 1, 2, 3, 5, 7.5 and 10 mol %. Hold base at 2.0 equivalents and co-solvent at 25 % for every loading. Triplicate.

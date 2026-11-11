@@ -1,0 +1,43 @@
+{
+  "set": "paraphrase",
+  "description": "The five core requests reworded in different styles with the same values and constraints, so each expected outcome is the core one.",
+  "assay": "configs/assay_reaction_screen.json",
+  "workcell": "configs/workcell_ot2.json",
+  "requests": [
+    {
+      "id": "p01_simple_factorial",
+      "file": "p01_simple_factorial.txt",
+      "expect_from": "core/01_simple_factorial",
+      "intent": "Terse rewording of core/01_simple_factorial. 'against' becomes 'vs', 'equivalents' becomes 'eq', 'co-solvent' becomes 'cosolvent', 'in triplicate' becomes 'n = 3', and the verb 'Screen' is dropped. Same values, units, replicates and constraints, so the expected outcome is the core one.",
+      "arithmetic": "Same as core/01_simple_factorial."
+    },
+    {
+      "id": "p02_too_big",
+      "file": "p02_too_big.txt",
+      "expect_from": "core/02_too_big",
+      "intent": "Chatty rewording of core/02_too_big. '1 to 10 mol % in 1 % steps' becomes 'every whole-number catalyst loading from 1 up to 10 mol%', 'against' becomes 'crossed with', base values drop the trailing zeros, and 'in triplicate' becomes 'three replicates of each'. Same values, units, replicates and constraints, so the expected outcome is the core one.",
+      "arithmetic": "Same as core/02_too_big."
+    },
+    {
+      "id": "p03_out_of_range",
+      "file": "p03_out_of_range.txt",
+      "expect_from": "core/03_out_of_range",
+      "intent": "List rewording of core/03_out_of_range. One factor per line, base before catalyst, 'equivalents' becomes 'equiv.', co-solvent is given in '%', and 'four replicates' becomes 'replicates: 4'. The out of range values 15 mol% and 3.5 equiv. are kept. Same values, units, replicates and constraints, so the expected outcome is the core one.",
+      "arithmetic": "Same as core/03_out_of_range."
+    },
+    {
+      "id": "p04_ambiguous",
+      "file": "p04_ambiguous.txt",
+      "expect_from": "core/04_ambiguous",
+      "intent": "Casual rewording of core/04_ambiguous with the purpose first. 'more base' becomes 'upping the base', 'usual' becomes 'normal', and the order becomes a question. It still gives no numbers. Same meaning, so the expected outcome is the core one.",
+      "arithmetic": "Same as core/04_ambiguous."
+    },
+    {
+      "id": "p05_reagent_limit",
+      "file": "p05_reagent_limit.txt",
+      "expect_from": "core/05_reagent_limit",
+      "intent": "Same request as core/05_reagent_limit in formal wording: '10 mol% throughout' for 'everywhere', 'eq.' for equivalents, 'in increments of 0.25 eq.' for '0.25 steps', and triplicate moved to the end. Catalyst stays first, as in core. The expected outcome is the core one.",
+      "arithmetic": "Same as core/05_reagent_limit."
+    }
+  ]
+}

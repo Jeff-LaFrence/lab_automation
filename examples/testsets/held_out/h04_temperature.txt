@@ -1,0 +1,1 @@
+Does temperature change how the catalyst loading behaves? Run catalyst at 1, 2 and 4 mol % at 25, 40 and 60 °C, with base at 1.5 equivalents and 20 % co-solvent, in duplicate.

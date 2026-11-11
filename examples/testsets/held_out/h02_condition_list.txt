@@ -1,0 +1,8 @@
+Please run these six conditions, three replicates each:
+1. catalyst 3 mol %, base 1.5 equivalents, co-solvent 20 %
+2. catalyst 6 mol %, base 1.5 equivalents, co-solvent 20 %
+3. catalyst 3 mol %, base 2.5 equivalents, co-solvent 20 %
+4. catalyst 3 mol %, base 1.5 equivalents, co-solvent 35 %
+5. catalyst 6.5 mol %, base 1.75 equivalents, co-solvent 20 %
+6. catalyst 8 mol %, base 3.0 equivalents, no co-solvent
+Number 1 is our centre point, 2 to 4 each change one thing from it, and 5 and 6 are the two best hits from last month.

@@ -55,7 +55,7 @@ def test_live_without_an_endpoint_says_so(tmp_path, capsys, monkeypatch):
     monkeypatch.chdir(tmp_path)
     for var in ("LABAUTO_MAIN_BASE_URL",):
         monkeypatch.delenv(var, raising=False)
-    monkeypatch.setattr("labauto.cli_plan.load_settings", lambda: Settings())
+    monkeypatch.setattr("labauto.cli_plan.load_settings", lambda **_: Settings())
     assert main(["plan", "anything", "--runs", str(tmp_path / "runs")]) == 2
     assert "No model endpoint is configured" in capsys.readouterr().out
     assert main(["eval-planner", "--out", str(tmp_path / "eval.md")]) == 1
@@ -82,7 +82,7 @@ def test_evaluation_page_from_scripted_runs(tmp_path):
         trials=2,
         runs_dir=tmp_path / "runs",
         out_path=tmp_path / "eval.md",
-        scenarios=["05_reagent_limit"],
+        ids=["05_reagent_limit"],
     )
     text = out.read_text()
     assert "| 05_reagent_limit | 2 | 0 | 2 | 0 | 0 | 2 of 2 passing |" in text

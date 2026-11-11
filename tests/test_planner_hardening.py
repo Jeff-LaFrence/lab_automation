@@ -362,7 +362,7 @@ def test_eval_refuses_to_publish_when_no_model_answered(tmp_path):
             trials=1,
             runs_dir=tmp_path / "r",
             out_path=tmp_path / "e.md",
-            scenarios=["01_simple_factorial"],
+            ids=["01_simple_factorial"],
         )
     assert not (tmp_path / "e.md").exists()
 
@@ -378,7 +378,7 @@ def test_eval_page_marks_scripted_numbers_and_counts_failures(tmp_path):
         trials=2,
         runs_dir=tmp_path / "r",
         out_path=tmp_path / "e.md",
-        scenarios=["01_simple_factorial"],
+        ids=["01_simple_factorial"],
     )
     text = out.read_text()
     assert "not from a model" in text

@@ -1,0 +1,191 @@
+{
+  "set": "core",
+  "description": "The five planner scenarios from SPEC.md section 8.9. Expected outcomes follow the SPEC table and Appendix C.",
+  "assay": "configs/assay_reaction_screen.json",
+  "workcell": "configs/workcell_ot2.json",
+  "requests": [
+    {
+      "id": "01_simple_factorial",
+      "file": "../../requests/01_simple_factorial.txt",
+      "intent": "A 4 x 3 x 1 factorial in triplicate that fits as asked. Anything other than exactly this design is unfaithful.",
+      "arithmetic": "12 conditions x 3 + 4 controls = 40 wells. Catalyst 278 of 1080 uL usable (SPEC Appendix C).",
+      "expect": {
+        "as_asked_valid": true,
+        "deviation_required": false,
+        "assumption_required": false,
+        "faithful": {
+          "grid": {
+            "catalyst_mol_pct": [
+              1.0,
+              2.0,
+              4.0,
+              8.0
+            ],
+            "base_equiv": [
+              1.0,
+              1.5,
+              2.0
+            ],
+            "cosolvent_pct": [
+              20.0
+            ]
+          },
+          "replicates": [
+            3
+          ],
+          "include_controls": true
+        }
+      }
+    },
+    {
+      "id": "02_too_big",
+      "file": "../../requests/02_too_big.txt",
+      "intent": "120 sample wells against 92. A faithful repair keeps to the requested values, keeps co-solvent at 20%, and keeps at least half of the requested sample wells. Cutting to duplicate (80 sample wells) or dropping some conditions are both fine.",
+      "arithmetic": "40 conditions x 3 = 120 sample wells against 92. In duplicate: 80 + 4 controls = 84 wells, catalyst 888 uL (SPEC Appendix C).",
+      "expect": {
+        "as_asked_valid": false,
+        "deviation_required": true,
+        "assumption_required": false,
+        "faithful": {
+          "fixed": {
+            "cosolvent_pct": 20.0
+          },
+          "allowed": {
+            "catalyst_mol_pct": [
+              1.0,
+              2.0,
+              3.0,
+              4.0,
+              5.0,
+              6.0,
+              7.0,
+              8.0,
+              9.0,
+              10.0
+            ],
+            "base_equiv": [
+              1.0,
+              1.5,
+              2.0,
+              2.5
+            ]
+          },
+          "min_sample_wells": 60,
+          "include_controls": true
+        }
+      }
+    },
+    {
+      "id": "03_out_of_range",
+      "file": "../../requests/03_out_of_range.txt",
+      "intent": "15 mol % and 3.5 equiv are outside the allowed ranges (max 10 and 3.0). Drop them or clamp them to 10 and 3.0, and declare it. The in-range values 5 and 10 mol % and 1.5 equiv must stay, whether the out-of-range values are dropped or clamped, as must four replicates and 10% co-solvent.",
+      "arithmetic": "Dropping both: 2 conditions x 4 = 8 sample wells. Clamping both: 4 conditions x 4 = 16 sample wells. Either fits easily.",
+      "expect": {
+        "as_asked_valid": false,
+        "deviation_required": true,
+        "assumption_required": false,
+        "faithful": {
+          "fixed": {
+            "cosolvent_pct": 10.0
+          },
+          "allowed": {
+            "catalyst_mol_pct": [
+              5.0,
+              10.0
+            ],
+            "base_equiv": [
+              1.5,
+              3.0
+            ]
+          },
+          "required_values": {
+            "catalyst_mol_pct": [
+              5.0,
+              10.0
+            ],
+            "base_equiv": [
+              1.5
+            ]
+          },
+          "replicates": [
+            4
+          ],
+          "include_controls": true
+        }
+      }
+    },
+    {
+      "id": "04_ambiguous",
+      "file": "../../requests/04_ambiguous.txt",
+      "intent": "No numbers given. The usual conditions are the reference control (2.0 mol %, 1.5 equiv, 20%). A faithful design includes those usual values (2.0 mol % catalyst, 1.5 equiv base, 20% co-solvent each appear somewhere), at least one base level above 1.5, and lists what it assumed. The usual conditions are stored in the assay as the reference control, and the planner sees them.",
+      "arithmetic": "Any small screen fits. The check is on the content, not the size.",
+      "expect": {
+        "as_asked_valid": null,
+        "deviation_required": false,
+        "assumption_required": true,
+        "faithful": {
+          "required_values": {
+            "base_equiv": [
+              1.5
+            ],
+            "catalyst_mol_pct": [
+              2.0
+            ],
+            "cosolvent_pct": [
+              20.0
+            ]
+          },
+          "required_any": {
+            "base_equiv": [
+              1.75,
+              2.0,
+              2.25,
+              2.5,
+              2.75,
+              3.0
+            ]
+          },
+          "include_controls": true
+        }
+      }
+    },
+    {
+      "id": "05_reagent_limit",
+      "file": "../../requests/05_reagent_limit.txt",
+      "intent": "Catalyst at 10 mol % everywhere is the point of the request, so a repair must keep it and cut wells instead. Lowering the catalyst to save reagent is unfaithful. Base and co-solvent values must come from the request. Owner review: spacing the base series out (for example 0.5 equiv steps instead of 0.25) is a fair repair and counts as faithful, unless a lab runs a fixed standard array.",
+      "arithmetic": "33 conditions x 3 = 99 sample wells against 92. In duplicate, 66 sample wells use 1320 uL of catalyst plus 8 uL for the reference controls = 1328 uL against 1080 usable (SPEC Appendix C). At 20 uL per well, at most 53 sample wells fit.",
+      "expect": {
+        "as_asked_valid": false,
+        "deviation_required": true,
+        "assumption_required": false,
+        "faithful": {
+          "fixed": {
+            "catalyst_mol_pct": 10.0
+          },
+          "allowed": {
+            "base_equiv": [
+              0.5,
+              0.75,
+              1.0,
+              1.25,
+              1.5,
+              1.75,
+              2.0,
+              2.25,
+              2.5,
+              2.75,
+              3.0
+            ],
+            "cosolvent_pct": [
+              0.0,
+              20.0,
+              40.0
+            ]
+          },
+          "min_sample_wells": 30,
+          "include_controls": true
+        }
+      }
+    }
+  ]
+}
