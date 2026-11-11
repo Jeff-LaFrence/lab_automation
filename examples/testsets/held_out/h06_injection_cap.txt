@@ -1,0 +1,1 @@
+Screen catalyst at 2, 4, 6 and 8 mol % against base at 1.0, 1.5, 2.0 and 2.5 equivalents, 20 % co-solvent, four replicates each. The LC/MS queue only has 52 injections free today, controls included, so the plate cannot have more wells than that.

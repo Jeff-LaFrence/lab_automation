@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from labauto.agents.llm import HostedClient, LiveClient, ReplayClient, ScriptedClient
@@ -179,28 +180,44 @@ def cmd_resume(args: argparse.Namespace) -> int:
 
 
 def cmd_eval(args: argparse.Namespace) -> int:
-    from labauto.planner_eval import NoModelAnswered, evaluate
+    """Run a test set on the live model and write its evaluation page.
 
-    settings = load_settings()
+    --model replaces LABAUTO_MAIN_MODEL for this run only. The environment is
+    read as usual, with that one value changed; nothing is written back.
+    """
+    from labauto.planner_eval import NoModelAnswered, default_out_path, eval_command, evaluate
+    from labauto.testsets import SetError, display_path, load_set, set_label
+
+    try:
+        tset = load_set(args.set)
+    except SetError as exc:
+        print(f"error: {exc}")
+        return EXIT_INTERNAL
+    out = Path(args.out) if args.out else default_out_path(tset.name)
+    environ = {**os.environ, "LABAUTO_MAIN_MODEL": args.model} if args.model else None
+    settings = load_settings(environ=environ)
     try:
         make_clients("live", settings)
     except ConfigError as exc:
         print(f"error: {exc}")
-        print(
-            "docs/planner_eval.md was not written. The README status table says live results are pending."
-        )
+        print(f"{out} was not written. The README status table says live results are pending.")
         return EXIT_HUMAN
+    shown_out = None
+    if args.out and out != default_out_path(tset.name):
+        shown_out = display_path(out)
     try:
         path = evaluate(
             lambda: make_clients("live", settings),
             settings,
             trials=args.trials,
             runs_dir=args.runs,
-            out_path=Path(args.out),
+            out_path=out,
+            testset=tset,
+            command=eval_command(set_label(tset), args.trials, args.model, shown_out),
         )
     except NoModelAnswered as exc:
         print(f"error: {exc}")
-        print(f"{args.out} was not written.")
+        print(f"{out} was not written.")
         return EXIT_HUMAN
     print(f"Wrote {path}")
     return EXIT_OK
@@ -326,7 +343,13 @@ def add_parsers(sub) -> None:
     p.set_defaults(func=cmd_resume)
 
     p = sub.add_parser("eval-planner", help="evaluate the planner on the live model")
+    p.add_argument("--set", default="core", help="test set name under examples/testsets, or a path")
     p.add_argument("--trials", type=int, default=5)
     p.add_argument("--runs", default="runs/eval")
-    p.add_argument("--out", default="docs/planner_eval.md")
+    p.add_argument(
+        "--out",
+        default=None,
+        help="page to write (default docs/planner_eval.md for core, docs/planner_eval_<set>.md otherwise)",
+    )
+    p.add_argument("--model", default=None, help="model tag to use in place of LABAUTO_MAIN_MODEL")
     p.set_defaults(func=cmd_eval)

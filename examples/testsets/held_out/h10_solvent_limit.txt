@@ -1,0 +1,1 @@
+Use all 96 wells. No controls this time, since they ran on yesterday's plate from the same stocks. Catalyst from 0.5 to 3 mol % in 0.5 steps, base at 1.0 and 1.25 equivalents, no co-solvent, eight replicates of each.

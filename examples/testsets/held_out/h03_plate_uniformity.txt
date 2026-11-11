@@ -1,0 +1,1 @@
+We want to see how even the plate is from the edges to the middle. Put the same reaction in all 96 wells: 2 mol % catalyst, 1.5 equivalents of base, 20 % co-solvent. Leave out the control wells this time. Every well should be identical.

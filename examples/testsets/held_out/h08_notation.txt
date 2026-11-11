@@ -1,0 +1,1 @@
+Base scan 0.75-2.25 eq in 0.25 eq increments vs cat. loading 2 and 4 mol%. Cosolvent at 0.10 and 0.30 volume fraction. n = 2.

@@ -1,0 +1,1 @@
+We are trying to reproduce a paper that used 1.2 mol % catalyst and 1.1 equivalents of base. Please run catalyst at 1.2, 2.5 and 5 mol % against base at 1.1 and 2.0 equivalents, all with 15 % co-solvent, in triplicate.
