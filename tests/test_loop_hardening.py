@@ -62,7 +62,9 @@ def test_envelope_notices_a_swapped_workcell(tmp_path):
     approve_waiting_round(cdir)
     env = json.loads((cdir / "envelope.json").read_text())
     assert env["workcell_id"] == "ot2_bench" and len(env["workcell_sha256"]) == 64
-    shutil.copy(ROOT / "configs" / "workcell_tecan_evo.json", wc)
+    other = json.loads(wc.read_text())
+    other["workcell_id"] = "ot2_bench_other"  # another bench, so the round still passes its checks
+    wc.write_text(json.dumps(other))
     st = advance_campaign(cdir)
     assert st.state == "AWAITING_APPROVAL" and st.round == 2
     assert "differs from the envelope" in st.history[-1]["reason"]
