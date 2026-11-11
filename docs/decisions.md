@@ -61,3 +61,27 @@ library, or where a fallback was taken. Open problems are at the end.
 - `protocol_tecan.py` uses deck names only as dictionary keys, so any name in a workcell file gives a valid script.
 - If compiling fails, the pipeline reports `SIM_OTHER` at the simulator layer with `needs_human` true, instead of crashing.
 - PyLabRobot's "does not fit at rails" error maps to `SIM_DECK_CONFLICT`. `HasTipError` (a channel that already holds a tip) maps to `SIM_OTHER`, because it means the generator forgot to drop a tip, not that a rack is empty.
+
+## Stage 2
+
+- Model server check (SPEC 8.2): there was no `.env`, and nothing answered at the address in `.env.example`. Three tries of `GET /v1/models`, two and a half minutes apart, all failed to connect. The owner had also said no model server would be available. Fallback taken as SPEC 8.2 names it: the stage is built and tested with `ScriptedClient`, and the README status table says live results are pending.
+- Because no live session could be recorded, `examples/recordings/` holds transcripts of scripted sessions, named `<scenario>.scripted.jsonl`. Each one is the real `transcript.jsonl` of a `labauto plan` run whose planner replies were written by hand (`examples/scripted/<scenario>.json`). Their model field says `scripted`. The demo prefers a live recording `<scenario>.jsonl` when one exists, and prints which kind it replayed.
+- `docs/planner_eval.md` is not written. `labauto eval-planner` refuses to run without a configured endpoint, so no numbers exist to publish.
+- The hosted client sends no temperature: current hosted models reject sampling settings with an error. It carries the reply schema in the system prompt rather than the provider's structured output feature, because strict schemas need fixed keys and the design's `grid` has free factor names. A refusal from the hosted model counts as a failed attempt. The model name comes only from `LABAUTO_HOSTED_MODEL`.
+- When a local server does not accept a JSON schema in `response_format`, the schema text is appended to the leading system message, not sent as a later system message. Some local chat templates refuse a system message after a user message.
+- The model's reply is validated against `PlannerOutput`, which forbids unknown fields and requires `deviations` and `assumptions` to be present. A missing `deviations` list is not read as "no deviations" (P5).
+- A planner design id is `d-<run id>-<attempt number>`, so every design names its run. Comparisons across runs ignore the id.
+- `transcript.jsonl` lines carry `scope`, `attempt`, and `call` (1 for the first call, 2 for the parse retry). On resume, a call already recorded is served from the transcript and the model is not asked again. Scripted and replay clients are moved past the replies already used.
+- Added fields to `state.json` beyond SPEC 8.6: `assay`, `workcell`, `seed`, `client`, `hosted_calls`, `final_attempt`, `design_hash`, `protocol_hash`, and `notes`. They let `labauto resume` rebuild the run with no other input.
+- Each attempt folder also holds `attempt.json` (written last, so it marks a finished attempt) and `check.json` (the full check result). `final/` is a copy of the passing attempt's folder.
+- An internal error (including a model endpoint that stops answering) moves the run to FAILED with the error and the state it happened in, and writes `error.txt` with path names removed. `labauto resume` puts a FAILED run back into the state it failed from.
+- `LABAUTO_HOSTED_MAX_CALLS_PER_RUN` counts calls, including the parse retry. With a cap of 1 the hosted attempt gets no retry.
+- No progress is judged on one rung: an attempt whose errors (codes and places) equal the previous attempt's on the same rung ends that rung.
+- `labauto approve` without `--by` records `unnamed person`. User names from the system are never read.
+- Approval is refused, not just voided, if the files in `final/` changed between the check and the approval.
+- `NEEDS_HUMAN` uses kind `handoff` in the core build. Kind `question` belongs to Extension A, which is not built.
+- `labauto plan` exit codes: 0 when the run awaits approval, 1 when it needs a person, 2 on an internal error or missing configuration.
+- The planner commands live in `cli_plan.py` and the evaluation in `planner_eval.py`, to keep `cli.py` short. The evaluation's failure notes are built by code from the attempts: each error code, how often it appeared, and one real message as the example.
+- "Valid after local repairs" counts trials that passed on the local rung, including those that passed on the first try. "Median seconds" is the model time summed over a trial's attempts.
+- The small endpoint has no key setting of its own in `.env.example`, so it uses `LABAUTO_MAIN_API_KEY`.
+- The planner's assay summary also says how many uL of each reagent one unit of its factor needs, so a model can reason about reagent limits.

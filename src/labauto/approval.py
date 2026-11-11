@@ -42,7 +42,9 @@ def current_hashes(run_dir: Path) -> tuple[str | None, str | None]:
         return None, None
     d_hash = design_hash(Design.model_validate_json(design_path.read_text(encoding="utf-8")))
     res = load_check(final)
-    artifact = final / Path(res.artifact_path).name if res and res.artifact_path else final / "protocol.py"
+    artifact = (
+        final / Path(res.artifact_path).name if res and res.artifact_path else final / "protocol.py"
+    )
     p_hash = file_hash(artifact) if artifact.exists() else None
     return d_hash, p_hash
 
@@ -85,7 +87,11 @@ def approve(
         envelope_ref=envelope_ref,
     )
     write_json(run_dir / "approval.json", approval)
-    label = "demo_auto (unattended demo, no person)" if mode == "demo_auto" else f"{mode} by {approval.by}"
+    label = (
+        "demo_auto (unattended demo, no person)"
+        if mode == "demo_auto"
+        else f"{mode} by {approval.by}"
+    )
     transition(run_dir, st, "APPROVED", f"approved: {label}")
     save_state(run_dir, st)
     write_run_summary(run_dir, st)
@@ -126,7 +132,14 @@ def verify(run_dir: Path) -> bool:
     d_hash, p_hash = current_hashes(run_dir)
     if (d_hash, p_hash) == (approval.design_hash, approval.protocol_hash):
         return True
-    changed = [n for n, a, b in (("design", d_hash, approval.design_hash), ("protocol", p_hash, approval.protocol_hash)) if a != b]
+    changed = [
+        n
+        for n, a, b in (
+            ("design", d_hash, approval.design_hash),
+            ("protocol", p_hash, approval.protocol_hash),
+        )
+        if a != b
+    ]
     approval.decision = "voided"
     approval.void_reason = f"{' and '.join(changed)} hash changed after approval"
     write_json(run_dir / "approval.json", approval)
@@ -160,7 +173,11 @@ def write_run_summary(run_dir: Path, st: RunState) -> Path:
     approval = load_approval(run_dir)
     title = st.state
     if st.state == "APPROVED" and approval:
-        title += " (demo_auto, no person)" if approval.mode == "demo_auto" else f" ({approval.mode}, {approval.by})"
+        title += (
+            " (demo_auto, no person)"
+            if approval.mode == "demo_auto"
+            else f" ({approval.mode}, {approval.by})"
+        )
     out = [f"# Run {st.run_id}: {title}", "", "## Request", "", f'> "{request}"', ""]
 
     final = load_check(run_dir / "final") if (run_dir / "final").exists() else None
@@ -195,10 +212,21 @@ def write_run_summary(run_dir: Path, st: RunState) -> Path:
     if st.state == "NEEDS_HUMAN" and st.needs_human:
         out += ["## Why a person is needed", "", st.needs_human.text, ""]
     if st.state == "FAILED" and st.history:
-        out += ["## Internal error", "", st.history[-1].reason, "", "See error.txt. `labauto resume` retries.", ""]
+        out += [
+            "## Internal error",
+            "",
+            st.history[-1].reason,
+            "",
+            "See error.txt. `labauto resume` retries.",
+            "",
+        ]
     if approval is not None:
         out += ["## Approval", ""]
-        mode = "demo_auto (unattended demo, no person approved this)" if approval.mode == "demo_auto" else approval.mode
+        mode = (
+            "demo_auto (unattended demo, no person approved this)"
+            if approval.mode == "demo_auto"
+            else approval.mode
+        )
         out += [
             f"- decision: {approval.decision}",
             f"- mode: {mode}",
@@ -217,7 +245,9 @@ def write_run_summary(run_dir: Path, st: RunState) -> Path:
         assay = load_assay(st.assay)
         workcell = load_workcell(st.workcell)
         where = "final" if final is not None else "last attempt"
-        files = sorted(p.name for p in (run_dir / ("final" if final else "attempts")).glob("*") if p.is_file())
+        files = sorted(
+            p.name for p in (run_dir / ("final" if final else "attempts")).glob("*") if p.is_file()
+        )
         body = render_summary(st.run_id, shown, assay, workcell, f"request.txt ({where})", files)
         out += body.split("\n", 2)[2].splitlines()
     path = run_dir / "summary.md"
@@ -234,7 +264,9 @@ def status_text(run_dir: Path) -> str:
     lines += [line.lstrip("- ") for line in _attempt_lines(run_dir, st)]
     approval = load_approval(run_dir)
     if approval:
-        lines.append(f"Approval: {approval.decision} ({approval.mode}, {approval.by}, {approval.at})")
+        lines.append(
+            f"Approval: {approval.decision} ({approval.mode}, {approval.by}, {approval.at})"
+        )
     lines.append(f"Summary: {run_dir / 'summary.md'}")
     return "\n".join(lines)
 

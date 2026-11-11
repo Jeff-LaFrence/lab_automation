@@ -96,7 +96,9 @@ def route(
     return decision
 
 
-def hosted_route(est_prompt_tokens: int, settings: Settings, log_path: Path | None, extra: dict | None = None) -> Route:
+def hosted_route(
+    est_prompt_tokens: int, settings: Settings, log_path: Path | None, extra: dict | None = None
+) -> Route:
     """The hosted rung is chosen by the ladder, not the router. Logged the same way."""
     hosted = settings.hosted
     decision = Route(
@@ -123,4 +125,8 @@ def endpoint_for(label: str, settings: Settings | None) -> Endpoint | None:
     """The configured endpoint behind a label, or None."""
     if settings is None:
         return None
-    return {"local-main": settings.main, "local-small": settings.small, "hosted": settings.hosted}.get(label)
+    return {
+        "local-main": settings.main,
+        "local-small": settings.small,
+        "hosted": settings.hosted,
+    }.get(label)

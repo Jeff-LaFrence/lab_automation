@@ -17,7 +17,13 @@ from pathlib import Path
 from labauto.config import DEFAULT_ASSAY, DEFAULT_WORKCELL, Settings, repo_root, resolve
 from labauto.orchestrator import Clients, load_attempts, load_check, load_state, start_run
 
-SCENARIOS = ["01_simple_factorial", "02_too_big", "03_out_of_range", "04_ambiguous", "05_reagent_limit"]
+SCENARIOS = [
+    "01_simple_factorial",
+    "02_too_big",
+    "03_out_of_range",
+    "04_ambiguous",
+    "05_reagent_limit",
+]
 NEEDS_DEVIATION = {"02_too_big", "03_out_of_range", "05_reagent_limit"}
 
 
@@ -69,7 +75,12 @@ def evaluate(
         request = resolve(f"examples/requests/{scenario}.txt").read_text(encoding="utf-8")
         for _ in range(trials):
             run_dir = start_run(
-                request, DEFAULT_ASSAY, DEFAULT_WORKCELL, clients_factory(), settings, Path(runs_dir) / scenario
+                request,
+                DEFAULT_ASSAY,
+                DEFAULT_WORKCELL,
+                clients_factory(),
+                settings,
+                Path(runs_dir) / scenario,
             )
             facts[scenario].append(trial_facts(run_dir))
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -121,5 +132,7 @@ def render(facts: dict[str, list[dict]], trials: int) -> str:
         scenario, number, e = items[0]
         where = Counter(s for s, _, _ in items)
         spread = ", ".join(f"{s} ({c})" for s, c in where.most_common())
-        lines.append(f"- {code}: {len(items)} times, in {spread}. Example from {scenario}, attempt {number}: {e.message}")
+        lines.append(
+            f"- {code}: {len(items)} times, in {spread}. Example from {scenario}, attempt {number}: {e.message}"
+        )
     return "\n".join(lines) + "\n"

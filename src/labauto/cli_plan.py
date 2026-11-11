@@ -125,7 +125,9 @@ def cmd_eval(args: argparse.Namespace) -> int:
         make_clients("live", settings)
     except ConfigError as exc:
         print(f"error: {exc}")
-        print("docs/planner_eval.md was not written. The README status table says live results are pending.")
+        print(
+            "docs/planner_eval.md was not written. The README status table says live results are pending."
+        )
         return EXIT_HUMAN
     path = evaluate(
         lambda: make_clients("live", settings),
@@ -185,7 +187,9 @@ def demo_planner(runs: str, live: bool = False) -> bool:
                 print(planner_row(scenario, "SKIPPED", "", "(no recording)"))
                 continue
             sources.add(source)
-            clients = Clients(local=ReplayClient(path), hosted=ReplayClient(path), spec=f"replay:{path.name}")
+            clients = Clients(
+                local=ReplayClient(path), hosted=ReplayClient(path), spec=f"replay:{path.name}"
+            )
         run_dir = start_run(request, DEFAULT_ASSAY, DEFAULT_WORKCELL, clients, settings, runs)
         d = run_summary_dict(run_dir)
         repaired = [c for codes in d["codes"][:-1] for c in codes]

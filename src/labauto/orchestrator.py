@@ -26,8 +26,8 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from labauto.agents.llm import ChatClient, Transcript, chat
-from labauto.agents.planner import build_messages, to_design
+from labauto.agents.llm import ChatClient, Transcript
+from labauto.agents.planner import build_messages, propose, to_design
 from labauto.agents.router import estimate_tokens, hosted_route, route
 from labauto.config import Settings, load_assay, load_workcell
 from labauto.instruments.base import scrub_paths
@@ -36,7 +36,6 @@ from labauto.models import (
     CheckResult,
     CreatedBy,
     NeedsHuman,
-    PlannerOutput,
     PlanError,
     RunState,
     Transition,
@@ -76,7 +75,9 @@ def load_state(run_dir: Path) -> RunState:
 
 def save_state(run_dir: Path, st: RunState) -> None:
     st.updated_at = utc_now()
-    (run_dir / "state.json").write_text(st.model_dump_json(indent=2, by_alias=True) + "\n", encoding="utf-8")
+    (run_dir / "state.json").write_text(
+        st.model_dump_json(indent=2, by_alias=True) + "\n", encoding="utf-8"
+    )
 
 
 def transition(run_dir: Path, st: RunState, to: str, reason: str) -> None:
@@ -128,14 +129,20 @@ def next_step(attempts: list[AttemptRecord], settings: Settings, hosted_calls: i
     local = [a for a in attempts if a.rung == "local"]
     hosted = [a for a in attempts if a.rung == "hosted"]
     if not hosted and len(local) < LOCAL_ATTEMPTS and not stalled(local):
-        return Step("attempt", rung="local", reason=f"local rung, attempt {len(local) + 1} of {LOCAL_ATTEMPTS}")
+        return Step(
+            "attempt",
+            rung="local",
+            reason=f"local rung, attempt {len(local) + 1} of {LOCAL_ATTEMPTS}",
+        )
     why_local = (
         f"no progress: attempt {local[-1].number} repeated the errors of attempt {local[-2].number}"
         if stalled(local) and len(local) < LOCAL_ATTEMPTS
         else f"{len(local)} local attempts used"
     )
     if settings.hosted is None:
-        return Step("handoff", reason=f"{why_local}; hosted rung not configured; handing to a person")
+        return Step(
+            "handoff", reason=f"{why_local}; hosted rung not configured; handing to a person"
+        )
     if len(hosted) < HOSTED_ATTEMPTS and hosted_calls < settings.hosted_max_calls:
         return Step("attempt", rung="hosted", reason=f"{why_local}; escalating to the hosted rung")
     return Step("handoff", reason=f"{why_local}; hosted rung used; handing to a person")
@@ -201,7 +208,12 @@ def advance(run_dir: Path, clients: Clients, settings: Settings) -> RunState:
         where = st.state
         (run_dir / "error.txt").write_text(scrub_paths(traceback.format_exc()), encoding="utf-8")
         st.needs_human = None
-        transition(run_dir, st, "FAILED", f"{type(exc).__name__} during {where}: {scrub_paths(str(exc))[:300]}")
+        transition(
+            run_dir,
+            st,
+            "FAILED",
+            f"{type(exc).__name__} during {where}: {scrub_paths(str(exc))[:300]}",
+        )
         _write_summary(run_dir, st)
     return st
 
@@ -219,13 +231,16 @@ def _drive(run_dir: Path, st: RunState, clients: Clients, settings: Settings) ->
         if step.kind == "pass":
             _finish(run_dir, st, attempts[-1], step.reason)
             return
+        if (
+            "hosted rung not configured" in step.reason
+            and "hosted rung not configured" not in st.notes
+        ):
+            st.notes.append("hosted rung not configured")
         if step.kind == "handoff":
             st.needs_human = NeedsHuman(kind="handoff", text=step.reason)
             transition(run_dir, st, "NEEDS_HUMAN", step.reason)
             _write_summary(run_dir, st)
             return
-        if "hosted rung not configured" in step.reason and "hosted rung not configured" not in st.notes:
-            st.notes.append("hosted rung not configured")
 
         number = len(attempts) + 1
         rung = step.rung
@@ -241,25 +256,27 @@ def _drive(run_dir: Path, st: RunState, clients: Clients, settings: Settings) ->
             client = clients.hosted or clients.local
             max_calls = max(1, min(2, settings.hosted_max_calls - st.hosted_calls))
         else:
-            decision = route("planner" if number == 1 else "repair", est, settings, calls_log, log_extra)
+            decision = route(
+                "planner" if number == 1 else "repair", est, settings, calls_log, log_extra
+            )
             client = clients.local
             max_calls = 2
         if decision.trim:
             messages = build_messages(assay, workcell, request, attempts, trim=True)
-        result = chat(
+        result = propose(
             client,
             decision.label,
             messages,
-            PlannerOutput,
-            temperature=0.3 if number == 1 else 0.1,
+            first=number == 1,
             transcript=transcript,
-            role="planner" if number == 1 else "repair",
             meta={"scope": "planner", "attempt": number, "rung": rung},
             max_calls=max_calls,
         )
         if rung == "hosted":
             st.hosted_calls += result.calls
-        transition(run_dir, st, "CHECKING", f"attempt {number}: reply received from {decision.label}")
+        transition(
+            run_dir, st, "CHECKING", f"attempt {number}: reply received from {decision.label}"
+        )
 
         record = _check_attempt(run_dir, number, rung, result, assay, workcell, st.seed)
         attempts.append(record)
@@ -293,7 +310,9 @@ def _check_attempt(run_dir, number, rung, result, assay, workcell, seed) -> Atte
                 assay,
                 workcell,
                 design_id=f"d-{run_dir.name}-{number:02d}",
-                created_by=CreatedBy(role="model", model=result.model or None, rung=result.endpoint_label),
+                created_by=CreatedBy(
+                    role="model", model=result.model or None, rung=result.endpoint_label
+                ),
                 seed=seed,
             )
         except ValidationError as exc:

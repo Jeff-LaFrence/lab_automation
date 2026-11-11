@@ -53,7 +53,9 @@ def test_extract_after_a_dangling_think_close():
 
 
 def test_extract_from_a_code_fence():
-    assert extract_json('Here it is:\n```json\n{"a": {"b": [1, 2]}}\n```\nDone.') == {"a": {"b": [1, 2]}}
+    assert extract_json('Here it is:\n```json\n{"a": {"b": [1, 2]}}\n```\nDone.') == {
+        "a": {"b": [1, 2]}
+    }
 
 
 def test_extract_first_complete_object_after_text():
@@ -71,7 +73,9 @@ def test_extract_without_json_fails():
 def test_malformed_json_is_retried_with_the_error(tmp_path):
     client = ScriptedClient(["{not json", json.dumps(GOOD)])
     t = Transcript(tmp_path / "transcript.jsonl")
-    result = chat(client, "local-main", [{"role": "user", "content": "x"}], PlannerOutput, transcript=t)
+    result = chat(
+        client, "local-main", [{"role": "user", "content": "x"}], PlannerOutput, transcript=t
+    )
     assert result.parsed is not None and result.calls == 2
     retry_messages = client.calls[1][1]
     assert retry_messages[-1]["role"] == "user"
@@ -89,7 +93,10 @@ def test_two_failures_give_schema_invalid():
 
 
 def test_think_tags_and_code_fences_are_parsed():
-    replies = ["<think>plan it</think>" + json.dumps(GOOD), "```json\n" + json.dumps(GOOD) + "\n```"]
+    replies = [
+        "<think>plan it</think>" + json.dumps(GOOD),
+        "```json\n" + json.dumps(GOOD) + "\n```",
+    ]
     client = ScriptedClient(replies)
     for _ in replies:
         assert chat(client, "local-main", [], PlannerOutput).parsed is not None
@@ -104,7 +111,14 @@ def test_max_calls_one_means_no_retry():
 def test_recorded_reply_is_not_requested_again(tmp_path):
     path = tmp_path / "transcript.jsonl"
     meta = {"scope": "planner", "attempt": 1}
-    chat(ScriptedClient([json.dumps(GOOD)]), "local-main", [], PlannerOutput, transcript=Transcript(path), meta=meta)
+    chat(
+        ScriptedClient([json.dumps(GOOD)]),
+        "local-main",
+        [],
+        PlannerOutput,
+        transcript=Transcript(path),
+        meta=meta,
+    )
     empty = ScriptedClient([])
     again = chat(empty, "local-main", [], PlannerOutput, transcript=Transcript(path), meta=meta)
     assert again.parsed is not None
@@ -135,7 +149,9 @@ def mock_server(structured_ok: bool, seen: list):
             200,
             json={
                 "model": "mock-model",
-                "choices": [{"message": {"content": json.dumps(GOOD), "reasoning_content": "thought"}}],
+                "choices": [
+                    {"message": {"content": json.dumps(GOOD), "reasoning_content": "thought"}}
+                ],
                 "usage": {"prompt_tokens": 11, "completion_tokens": 7},
             },
         )
@@ -143,7 +159,9 @@ def mock_server(structured_ok: bool, seen: list):
     return httpx.MockTransport(handler)
 
 
-ENDPOINT = Endpoint(label="local-main", base_url="http://mock.invalid/v1", model="mock-model", api_key="secret-key")
+ENDPOINT = Endpoint(
+    label="local-main", base_url="http://mock.invalid/v1", model="mock-model", api_key="secret-key"
+)
 
 
 @pytest.mark.parametrize("structured_ok", [True, False])
@@ -152,7 +170,13 @@ def test_live_client_probes_structured_output(structured_ok, tmp_path):
     seen: list = []
     client = LiveClient({"local-main": ENDPOINT}, transport=mock_server(structured_ok, seen))
     t = Transcript(tmp_path / "transcript.jsonl")
-    result = chat(client, "local-main", [{"role": "system", "content": "s"}, {"role": "user", "content": "u"}], PlannerOutput, transcript=t)
+    result = chat(
+        client,
+        "local-main",
+        [{"role": "system", "content": "s"}, {"role": "user", "content": "u"}],
+        PlannerOutput,
+        transcript=t,
+    )
     assert result.parsed is not None
     assert result.prompt_tokens == 11 and result.model == "mock-model"
     final = seen[-1]
@@ -185,7 +209,10 @@ def test_live_client_down_raises():
 
 
 def test_settings_never_show_the_key():
-    s = load_settings(env_file=None, environ={"LABAUTO_MAIN_BASE_URL": "http://x.invalid/v1", "LABAUTO_MAIN_API_KEY": "k-123"})
+    s = load_settings(
+        env_file=None,
+        environ={"LABAUTO_MAIN_BASE_URL": "http://x.invalid/v1", "LABAUTO_MAIN_API_KEY": "k-123"},
+    )
     assert s.main is not None and s.main.api_key == "k-123"
     assert "k-123" not in repr(s) and "k-123" not in s.model_dump_json()
 

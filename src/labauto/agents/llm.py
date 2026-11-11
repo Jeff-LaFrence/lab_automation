@@ -403,7 +403,9 @@ class HostedClient:
     def complete(self, label, messages, schema, temperature, max_tokens) -> RawReply:
         ep = self.endpoint
         if ep.provider == "openai_compatible":
-            return LiveClient({label: ep}).complete(label, messages, schema, temperature, max_tokens)
+            return LiveClient({label: ep}).complete(
+                label, messages, schema, temperature, max_tokens
+            )
         if ep.provider != "anthropic":
             raise EndpointUnavailable(f"unknown hosted provider '{ep.provider}'")
         try:

@@ -216,7 +216,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("demo", help="run the demo cases with no network")
     p.add_argument("--runs", default="runs", help="folder for run records")
-    p.add_argument("--live", action="store_true", help="run the planner scenarios on the configured endpoint")
+    p.add_argument(
+        "--live", action="store_true", help="run the planner scenarios on the configured endpoint"
+    )
     p.set_defaults(func=cmd_demo)
 
     from labauto.cli_plan import add_parsers

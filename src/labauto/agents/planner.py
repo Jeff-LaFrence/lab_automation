@@ -12,7 +12,7 @@ from importlib import resources
 
 from labauto import labware
 from labauto.config import allowed_values, fmt, fmt_ul, sample_wells
-from labauto.models import AttemptRecord, Assay, CreatedBy, Design, Layout, Workcell
+from labauto.models import Assay, AttemptRecord, CreatedBy, Design, Layout, Workcell
 
 
 def load_prompt(name: str) -> str:
@@ -30,7 +30,9 @@ def assay_summary(assay: Assay) -> str:
         reagent = next((r for r, s in assay.reagents.items() if s.factor == name), name)
         lines.append(f"- {name} ({spec.unit}): {values}")
         lines.append(f"  Each 1 uL of {reagent} per well gives {per_ul} {spec.unit}.")
-    fixed = [f"{r} {fmt_ul(s.volume_ul or 0)} uL" for r, s in assay.reagents.items() if s.role == "fixed"]
+    fixed = [
+        f"{r} {fmt_ul(s.volume_ul or 0)} uL" for r, s in assay.reagents.items() if s.role == "fixed"
+    ]
     fill = [r for r, s in assay.reagents.items() if s.role == "fill"]
     lines.append("")
     lines.append(
@@ -45,7 +47,11 @@ def assay_summary(assay: Assay) -> str:
             if ctrl.conditions:
                 what = ", ".join(f"{k} {fmt(v)}" for k, v in ctrl.conditions.items())
             else:
-                what = "no catalyst" if (ctrl.volumes_ul or {}).get("catalyst") == 0 else "fixed volumes"
+                what = (
+                    "no catalyst"
+                    if (ctrl.volumes_ul or {}).get("catalyst") == 0
+                    else "fixed volumes"
+                )
             lines.append(f"- {name}: wells {', '.join(ctrl.wells)}, {what}")
     on = len(sample_wells(assay, True))
     off = len(sample_wells(assay, False))
@@ -87,7 +93,11 @@ def attempt_text(a: AttemptRecord) -> str:
     else:
         body = "Design:\n" + json.dumps(a.design)
     errors = "\n".join(
-        json.dumps(e.model_dump(include={"code", "layer", "where", "message", "fix_hint", "options", "needs_human"}))
+        json.dumps(
+            e.model_dump(
+                include={"code", "layer", "where", "message", "fix_hint", "options", "needs_human"}
+            )
+        )
         for e in a.errors
     )
     return f"{head}\n{body}\nErrors:\n{errors or '(none)'}"
@@ -145,4 +155,35 @@ def to_design(
             "layout": Layout(strategy="randomized", seed=seed).model_dump(),
             "created_by": created_by.model_dump(),
         }
+    )
+
+
+def propose(
+    client,
+    label: str,
+    messages: list[dict],
+    *,
+    first: bool,
+    transcript=None,
+    meta: dict | None = None,
+    max_calls: int = 2,
+):
+    """The planner slot: ask a model for one design. Returns a ChatResult whose
+    parsed field is a PlannerOutput as a dict, or None with the reason in error.
+
+    Temperature is 0.3 for a first attempt and 0.1 for repairs.
+    """
+    from labauto.agents.llm import chat
+    from labauto.models import PlannerOutput
+
+    return chat(
+        client,
+        label,
+        messages,
+        PlannerOutput,
+        temperature=0.3 if first else 0.1,
+        transcript=transcript,
+        role="planner" if first else "repair",
+        meta=meta,
+        max_calls=max_calls,
     )
