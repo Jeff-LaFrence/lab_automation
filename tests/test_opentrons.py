@@ -179,3 +179,34 @@ def test_repeated_simulations_do_not_leak_state(assay, workcell, good_design, tm
     assert a.ok and b.ok
     assert a.sim.steps == b.sim.steps
     assert a.protocol_hash == b.protocol_hash
+
+
+def test_simulator_rejects_dispense_above_aspirated():
+    src = HEADER + (
+        "    small.pick_up_tip()\n"
+        "    small.aspirate(5, reservoir['A1'])\n"
+        "    small.dispense(10, plate['E1'])\n"
+    )
+    assert simulate_source(src, None).error.code == "SIM_BAD_VOLUME"
+
+
+def test_simulator_rejects_invalid_slot():
+    src = HEADER.replace(
+        'load_labware("nest_12_reservoir_15ml", 3)', 'load_labware("nest_12_reservoir_15ml", 13)'
+    )
+    err = simulate_source(src, None).error
+    assert err.code == "SIM_DECK_CONFLICT"
+    assert "is not a valid deck slot" in err.message
+
+
+def test_simulator_does_not_track_source_volumes():
+    """18 mL drawn from one 15 mL reservoir well passes. The SOURCE_SHORT rule exists for this."""
+    src = (
+        HEADER
+        + "    large.pick_up_tip()\n"
+        + "".join(
+            "    large.aspirate(300, reservoir['A1'])\n    large.dispense(300, reservoir['A2'])\n"
+            for _ in range(60)
+        )
+    )
+    assert simulate_source(src, None).ok
