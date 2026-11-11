@@ -1,0 +1,14 @@
+.venv/
+.env
+.claude/
+CLAUDE.local.md
+runs/
+campaigns/
+.labauto/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
