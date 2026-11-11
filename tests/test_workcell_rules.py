@@ -179,3 +179,11 @@ def test_bad_inventory_numbers_fail_when_the_file_loads(workcell):
     ):
         with pytest.raises(pydantic.ValidationError):
             edit(workcell, change)
+
+
+def test_ot2_mount_must_be_left_or_right(assay, workcell, good_design):
+    errors = run_rules(
+        good_design, assay, edit(workcell, lambda d: d["pipettes"][0].update(mount="middle"))
+    )
+    assert codes(errors) == ["BAD_SLOT"]
+    assert errors[0].where == "pipette:small"

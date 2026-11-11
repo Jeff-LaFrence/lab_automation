@@ -609,6 +609,19 @@ def validate_worklist(
 
     pmap = inst.pipette_map()
     for pip in workcell.pipettes:
+        if not inst.valid_mount(pip.mount):
+            errors.append(
+                PlanError(
+                    code="BAD_SLOT",
+                    layer="workcell",
+                    where=f"pipette:{pip.name}",
+                    message=f"Pipette {pip.name} is on mount '{pip.mount}', which is not a valid mount on {inst.name}.",
+                    fix_hint="Fix the pipette mount in the workcell file.",
+                    options=["ask_human_to_fix_workcell"],
+                    needs_human=True,
+                    short=f"{pip.name} mount {pip.mount}",
+                )
+            )
         if pip.model not in pmap:
             errors.append(
                 _unknown_labware(f"pipette:{pip.name}", f"pipette model '{pip.model}'", inst.name)

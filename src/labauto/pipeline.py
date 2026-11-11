@@ -47,14 +47,16 @@ def file_hash(path: str | Path) -> str:
 
 def fill_ids(design: Design, assay: Assay, workcell: Workcell) -> Design:
     """Fill the fields code owns: the design id, assay id, and workcell id when empty."""
-    updates: dict = {}
-    if not design.assay_id:
-        updates["assay_id"] = assay.assay_id
-    if not design.workcell_id:
-        updates["workcell_id"] = workcell.workcell_id
-    filled = design.model_copy(update=updates)
+    filled = design
+    if not filled.assay_id:
+        filled = filled.model_copy(update={"assay_id": assay.assay_id})
     if not filled.design_id:
-        filled = filled.model_copy(update={"design_id": "d-" + design_hash(filled)[:12]})
+        # The id comes from the design's content without the workcell, so the
+        # same design file gives the same design id and plan on every workcell.
+        content = filled.model_copy(update={"workcell_id": ""})
+        filled = filled.model_copy(update={"design_id": "d-" + design_hash(content)[:12]})
+    if not filled.workcell_id:
+        filled = filled.model_copy(update={"workcell_id": workcell.workcell_id})
     return filled
 
 
@@ -198,7 +200,25 @@ def check(
         scratch = repo_root() / ".labauto" / "tmp"
         scratch.mkdir(parents=True, exist_ok=True)
         out_dir = tempfile.mkdtemp(prefix="check_", dir=scratch)
-    artifact = inst.compile(worklist, workcell, plan, Path(out_dir))
+    try:
+        artifact = inst.compile(worklist, workcell, plan, Path(out_dir))
+    except Exception as exc:  # a compile failure is a fault in this project, kept as data
+        return _fail(
+            result,
+            "simulator",
+            [
+                PlanError(
+                    code="SIM_OTHER",
+                    layer="simulator",
+                    where=f"compile ({inst.name})",
+                    message=f"The protocol could not be compiled for {inst.name}: {type(exc).__name__}: {exc}",
+                    fix_hint="This points to a fault in the protocol generator or the workcell file.",
+                    options=["ask_human"],
+                    needs_human=True,
+                    short=f"compile {type(exc).__name__}",
+                )
+            ],
+        )
     result.artifact_path = str(artifact)
     result.protocol_hash = file_hash(artifact)
 

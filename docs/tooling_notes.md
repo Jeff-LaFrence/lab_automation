@@ -118,6 +118,7 @@ Library facts found while building, which differ from SPEC.md Appendix A:
 | Picking a tip from an empty spot (rack used up) | `SIM_OUT_OF_TIPS` | `test_tip_shortfall_is_caught_by_the_tracker` |
 | Two labware on one carrier site | `SIM_DECK_CONFLICT` | `test_deck_conflict_is_caught_by_the_simulator` |
 | Carriers that overlap on the rails | `SIM_DECK_CONFLICT` | `test_overlapping_carriers_pass_the_rules_but_not_the_simulator` |
+| A carrier that runs past the edge of the deck | `SIM_DECK_CONFLICT` | `test_carrier_past_the_deck_edge_is_a_deck_conflict` |
 
 So the tracker covers two of the Opentrons simulator's blind spots: overfilled
 wells and source wells drawn dry. It also catches overlapping carriers, which

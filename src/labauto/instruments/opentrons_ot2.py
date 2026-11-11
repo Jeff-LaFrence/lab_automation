@@ -89,6 +89,9 @@ class OpentronsOT2:
     def pipette_map(self) -> dict[str, str]:
         return dict(PIPETTE_MAP)
 
+    def valid_mount(self, mount: str) -> bool:
+        return mount in ("left", "right")
+
     def valid_position(self, position: dict) -> bool:
         slot = position.get("slot")
         return set(position) == {"slot"} and type(slot) is int and 1 <= slot <= 11

@@ -215,3 +215,84 @@ def test_aspirate_above_tip_capacity_is_caught(tecan, tmp_path):
     err = evo.simulate(artifact, tecan).error
     assert err.code == "SIM_BAD_VOLUME"
     assert "55" in err.message
+
+
+# ---------------------------------------------------------------- review fixes
+
+
+def test_a_second_plate_on_the_deck_is_not_read_into_the_ledger(
+    assay, tecan, good_design, tmp_path
+):
+    def stock(d):
+        d["deck"].append(
+            {
+                "name": "stock",
+                "labware": "plate_96_flat_360ul",
+                "position": {"carrier": "MP_3Pos", "rails": 16, "site": 2},
+            }
+        )
+        d["inventory"]["catalyst"] = {"labware": "stock", "well": "H12", "volume_ul": 340}
+
+    result = check(good_design, assay, edit(tecan, stock), out_dir=tmp_path)
+    assert result.ok, result.errors
+    assert "H12" not in result.sim.well_volumes
+
+
+def test_a_mount_the_instrument_lacks_is_a_bad_slot(assay, tecan, good_design, tmp_path):
+    for mount in ("left", "channel_00", "channel_9"):
+        wc = edit(tecan, lambda d, m=mount: d["pipettes"][1].update(mount=m))
+        result = check(good_design, assay, wc, out_dir=tmp_path / mount)
+        assert result.failed_layer == "workcell"
+        assert result.errors[0].code == "BAD_SLOT" and result.errors[0].needs_human
+
+
+def test_free_text_deck_names_give_a_valid_script(assay, tecan, good_design, tmp_path):
+    def hyphen(d):
+        d["deck"][0]["name"] = "tips-200"
+        d["pipettes"][1]["tips"] = "tips-200"
+
+    result = check(good_design, assay, edit(tecan, hyphen), out_dir=tmp_path)
+    assert result.ok, result.errors
+    proc = subprocess.run(
+        [sys.executable, str(tmp_path / "protocol_tecan.py")],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    assert proc.returncode == 0, proc.stderr[-2000:]
+
+
+def test_a_design_without_ids_gives_identical_plans(
+    assay, workcell, tecan, good_design_data, tmp_path
+):
+    from labauto.models import Design
+
+    data = {k: v for k, v in good_design_data.items() if k not in ("design_id", "workcell_id")}
+    design = Design.model_validate(data)
+    ot2 = check(design, assay, workcell, out_dir=tmp_path / "ot2")
+    evo = check(design, assay, tecan, out_dir=tmp_path / "evo")
+    assert ot2.ok and evo.ok
+    assert ot2.plan == evo.plan
+
+
+def test_carrier_past_the_deck_edge_is_a_deck_conflict(assay, tecan, good_design, tmp_path):
+    def edge(d):
+        for e in d["deck"][2:]:
+            e["position"]["rails"] = 45
+
+    result = check(good_design, assay, edit(tecan, edge), out_dir=tmp_path)
+    assert result.failed_layer == "simulator"
+    assert result.errors[0].code == "SIM_DECK_CONFLICT"
+
+
+def test_a_tip_already_held_is_a_generator_fault(assay, tecan, good_design, tmp_path):
+    import json
+
+    check(good_design, assay, tecan, out_dir=tmp_path)
+    artifact = tmp_path / "protocol_tecan.json"
+    data = json.loads(artifact.read_text())
+    first_drop = next(i for i, c in enumerate(data["calls"]) if c["op"] == "drop_tip")
+    del data["calls"][first_drop]
+    artifact.write_text(json.dumps(data))
+    err = TecanEVO().simulate(artifact, tecan).error
+    assert err.code == "SIM_OTHER" and err.needs_human
