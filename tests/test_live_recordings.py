@@ -95,3 +95,50 @@ def test_the_decider_recording_replays_the_live_decisions(tmp_path):
         picked = [p["conditions"] for p in decision["picks"]]
         recorded = [p["conditions"] for p in finals[f"decider-r{rnd:02d}"]]
         assert picked == recorded
+
+
+SCENARIOS = sorted(
+    p.name.removesuffix(".jsonl")
+    for p in LIVE
+    if p.name[:2].isdigit()  # planner scenarios are named 01_... to 05_...
+)
+
+
+def test_every_planner_scenario_has_a_live_recording():
+    expected = sorted(p.stem for p in (ROOT / "examples" / "requests").glob("*.txt"))
+    assert SCENARIOS == expected
+
+
+@pytest.mark.parametrize("scenario", SCENARIOS)
+def test_a_planner_recording_replays_to_the_same_final_design(tmp_path, scenario):
+    """Trial 1 of the live evaluation, replayed offline, ends the same way with the same design."""
+    from labauto.agents.llm import ReplayClient
+    from labauto.config import Settings
+    from labauto.orchestrator import Clients, load_attempts, load_state, start_run
+
+    path = RECORDINGS / f"{scenario}.jsonl"
+    recs = records(path)
+    request = (ROOT / "examples" / "requests" / f"{scenario}.txt").read_text()
+    run = start_run(
+        request,
+        str(ROOT / "configs" / "assay_reaction_screen.json"),
+        str(ROOT / "configs" / "workcell_ot2.json"),
+        Clients(local=ReplayClient(path)),
+        Settings(),
+        tmp_path / "runs",
+    )
+    assert load_state(run).state == "AWAITING_APPROVAL"
+    attempts = load_attempts(run)
+    assert len(attempts) == len(recs)
+    assert {a.model for a in attempts} == {recs[0]["model"]}
+    final = json.loads((run / "final" / "design.json").read_text())
+    recorded = recs[-1]["parsed"]["design"]
+    for key in (
+        "grid",
+        "conditions",
+        "replicates",
+        "include_controls",
+        "deviations",
+        "assumptions",
+    ):
+        assert final[key] == recorded[key], key

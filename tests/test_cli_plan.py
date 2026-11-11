@@ -95,11 +95,12 @@ def test_demo_shows_three_planner_scenarios(tmp_path, capsys):
     assert main(["demo", "--runs", str(tmp_path)]) == 0
     out = capsys.readouterr().out
     rows = [" ".join(line.split()) for line in out.splitlines()]
-    assert "01_simple_factorial AWAITING_APPROVAL 1 40 wells, no deviations (scripted)" in rows
-    assert any(
-        r.startswith("02_too_big AWAITING_APPROVAL 2 84 wells, repaired TOO_MANY_WELLS")
-        for r in rows
+    # The demo replays the committed live recordings (trial 1 of the live evaluation).
+    assert "01_simple_factorial AWAITING_APPROVAL 1 40 wells, no deviations" in rows
+    assert (
+        "02_too_big AWAITING_APPROVAL 2 84 wells, repaired MISSING_FACTOR, UNKNOWN_FACTOR, "
+        "1 deviation declared" in rows
     )
-    assert any(r.startswith("03_out_of_range AWAITING_APPROVAL 3") for r in rows)
-    assert "scripted session (hand-written replies, not a model)" in out
+    assert "03_out_of_range AWAITING_APPROVAL 1 20 wells, 2 deviations declared" in rows
+    assert out.count("recorded session of qwen3.8:27b") >= 3
     assert "UNEXPECTED" not in out

@@ -70,7 +70,7 @@ All spectra, flagged or not. Points of yield.
 - phase_error: unphased naive integration is off by -12.42 points on average. With autophase it is off by -0.14 (mean abs error 1.42), which is the fair comparison. The fit's mean abs error is 0.27, and NMR_PHASE_CORRECTED is raised on 100%. The phase each finds is off by 0.4 degrees (autophase) and 0.1 degrees (fit) on average.
 - low_signal: the fit's errors reach 6.12 points. NMR_LOW_SNR is raised on 100% of these spectra and 100% are excluded. Naive integration with autophase is larger than unphased here (6.13 against 4.44): a phase taken from a weak standard is off by 3.0 degrees on average (against 0.4 in the clean case), and a small phase error lets the dispersion tail of the large water peak change the area in the singlet region.
 - impurity: the fitted doublet's mean abs error is 0.48, against 0.49 on the same spectra without the impurity (mean change 0.02, largest 0.21). The impurity goes into the singlet (bias +11.68), and so half of it into yield_pct (bias +5.81). The fit does not remove an impurity; it keeps the doublet clean of it and flags the gap when it is over 5 points.
-- impurity sweep: NMR_SIGNAL_INCONSISTENT catches 2/23 (9%) impurities under 5 points, 28/30 (93%) from 5 to 10 points, and 67/67 (100%) of 10 points and over. On the same spectra without the impurity it is raised on 0/120 (0%). The flag keeps the well, so a person or the reviewer decides what to do with it. 21 of the 23 impurities under 5 points pass every fixed rule unflagged.
+- impurity sweep: NMR_SIGNAL_INCONSISTENT catches 2/23 (9%) impurities under 5 points, 28/30 (93%) from 5 to 10 points, and 67/67 (100%) of 10 points and over. On the same spectra without the impurity it is raised on 0/120 (0%). The flag keeps the well, so a person or the reviewer decides what to do with it. 21 of the 23 impurities under 5 points pass every per-spectrum flag of the fitter unflagged (plate-level rules do not run in this check).
 
 ## Error by signal
 
@@ -126,8 +126,8 @@ Approximate. Mean wall time per spectrum over the 150 case spectra, from one run
 | Method | Milliseconds per spectrum, about |
 |---|---|
 | naive integration, unphased | 2.7 |
-| naive integration with autophase | 5.8 |
-| lineshape fit | 31 |
+| naive integration with autophase | 5.9 |
+| lineshape fit | 32 |
 
 ## Figure
 
@@ -136,4 +136,4 @@ The 7.2 to 7.5 ppm region of one spectrum at 45 % yield, clean and with broad li
 ![NMR fit](img/nmr_fit.png)
 
 Date: 2026-11-11  
-Git commit: 0d9cc9c
+Git commit: v0.3-closed-loop-10-g206118e

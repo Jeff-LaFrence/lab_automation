@@ -1,6 +1,6 @@
 {
   "set": "held_out",
-  "description": "Ten requests for kinds of experiments the core five do not cover, with every expected outcome worked out by running designs through labauto's own checks.",
+  "description": "Eleven requests for kinds of experiments the core five do not cover, with every expected outcome worked out by running designs through labauto's own checks.",
   "assay": "configs/assay_reaction_screen.json",
   "workcell": "configs/workcell_ot2.json",
   "requests": [
