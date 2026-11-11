@@ -1,0 +1,1 @@
+Full plate: catalyst at 10 mol % everywhere, base from 0.5 to 3.0 equivalents in 0.25 steps, co-solvent at 0, 20 and 40 %, in triplicate.

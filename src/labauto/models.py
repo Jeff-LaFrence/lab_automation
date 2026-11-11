@@ -342,3 +342,109 @@ class CheckResult(BaseModel):
     sim: SimResult | None = None
     design_hash: str | None = None
     protocol_hash: str | None = None
+
+
+# ---------------------------------------------------------------- planner and runs (Stage 2)
+
+
+class ModelDesign(Strict_):
+    """The design fields a model writes. Code fills the rest (ids, layout, created_by)."""
+
+    title: str
+    grid: dict[str, list[FactorValue]] | None = None
+    conditions: list[dict[str, FactorValue]] | None = None
+    replicates: int
+    include_controls: bool = True
+    deviations: list[Deviation]
+    assumptions: list[str]
+    notes: str = ""
+
+    @model_validator(mode="after")
+    def _not_both(self) -> ModelDesign:
+        if self.grid is not None and self.conditions is not None:
+            raise ValueError("set exactly one of 'grid' and 'conditions', not both")
+        return self
+
+
+class PlannerOutput(Strict_):
+    """One planner reply."""
+
+    action: Literal["submit_design"]
+    design: ModelDesign
+
+
+class AttemptRecord(BaseModel):
+    """One planner attempt: who wrote it, what it was, and what the checks said."""
+
+    number: int
+    rung: Literal["local", "hosted"]
+    endpoint_label: str
+    model: str = ""
+    design: dict | None = None
+    errors: list[PlanError] = Field(default_factory=list)
+    ok: bool = False
+    failed_layer: str | None = None
+    reply_error: str | None = None
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    seconds: float = 0.0
+    calls: int = 0
+    design_hash: str | None = None
+    protocol_hash: str | None = None
+
+    def signature(self) -> list[tuple[str, str]]:
+        """The errors as (code, where) pairs, used to spot an attempt that made no progress."""
+        return sorted({(e.code, e.where) for e in self.errors})
+
+
+class NeedsHuman(BaseModel):
+    """Why a run is waiting for a person."""
+
+    kind: Literal["handoff", "question", "approval"]
+    text: str
+
+
+class Transition(BaseModel):
+    """One state change, with when and why."""
+
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
+    from_: str = Field(alias="from")
+    to: str
+    at: str
+    reason: str = ""
+
+
+class RunState(BaseModel):
+    """state.json for a planned run."""
+
+    run_id: str
+    state: str
+    updated_at: str
+    rung: str | None = None
+    attempt: int = 0
+    needs_human: NeedsHuman | None = None
+    history: list[Transition] = Field(default_factory=list)
+    assay: str = ""
+    workcell: str = ""
+    seed: int = 0
+    client: str = ""
+    hosted_calls: int = 0
+    final_attempt: int | None = None
+    design_hash: str | None = None
+    protocol_hash: str | None = None
+    notes: list[str] = Field(default_factory=list)
+
+
+class Approval(BaseModel):
+    """approval.json: the decision, who made it, and the hashes it is tied to."""
+
+    decision: Literal["approved", "rejected", "voided"]
+    mode: Literal["human", "envelope", "demo_auto"]
+    by: str
+    at: str
+    comment: str = ""
+    design_hash: str | None = None
+    protocol_hash: str | None = None
+    envelope_ref: str | None = None
+    void_reason: str | None = None
