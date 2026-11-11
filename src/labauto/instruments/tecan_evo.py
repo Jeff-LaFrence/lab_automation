@@ -49,6 +49,7 @@ ERROR_CODES = [
     ("already occupied", "SIM_DECK_CONFLICT"),
     ("already has a resource", "SIM_DECK_CONFLICT"),
     ("Rails must be between", "SIM_DECK_CONFLICT"),
+    ("does not fit at rails", "SIM_DECK_CONFLICT"),
     ("not a known carrier", "SIM_DECK_CONFLICT"),
     ("not a known labware", "SIM_LABWARE_NOT_FOUND"),
 ]
@@ -70,9 +71,10 @@ HINTS = {
 def channel_of(mount: str) -> int:
     """A Tecan pipette's mount is its LiHa channel, written channel_0 to channel_7."""
     prefix = "channel_"
-    if not mount.startswith(prefix) or not mount[len(prefix) :].isdigit():
+    digits = mount[len(prefix) :]
+    if not mount.startswith(prefix) or not digits.isdigit() or str(int(digits)) != digits:
         raise ValueError(f"mount '{mount}' is not a channel such as channel_0")
-    ch = int(mount[len(prefix) :])
+    ch = int(digits)
     if not 0 <= ch < NUM_CHANNELS:
         raise ValueError(f"mount '{mount}' is outside channels 0 to {NUM_CHANNELS - 1}")
     return ch
@@ -88,6 +90,14 @@ class TecanEVO:
 
     def pipette_map(self) -> dict[str, str]:
         return dict(PIPETTE_MAP)
+
+    def valid_mount(self, mount: str) -> bool:
+        """A Tecan pipette mount names one LiHa channel: channel_0 to channel_7."""
+        try:
+            channel_of(mount)
+        except ValueError:
+            return False
+        return True
 
     def valid_position(self, position: dict) -> bool:
         if set(position) != {"carrier", "rails", "site"}:
@@ -175,6 +185,7 @@ class TecanEVO:
             "plan_id": plan.plan_id,
             "design_id": plan.design_id,
             "workcell_id": workcell.workcell_id,
+            "plate": plan.plate,
             "deck": deck,
             "sources": {
                 reagent: {"labware": inv.labware, "well": inv.well, "volume_ul": inv.volume_ul}
@@ -206,21 +217,24 @@ class TecanEVO:
             '    deck.assign_child_resource(R.Trash(name="trash", size_x=100, size_y=100, size_z=10),',
             "                               location=R.Coordinate(x=900, y=100, z=0))",
         ]
-        carriers: dict[tuple, str] = {}
+        # Deck names are free text, so they are only ever used as dictionary keys.
+        lines += ["    carriers = {}", "    labware = {}"]
+        seen: set[tuple] = set()
         for d in data["deck"]:
             key = (d["carrier"], d["rails"])
-            if key not in carriers:
-                var = f"carrier_{len(carriers) + 1}"
-                carriers[key] = var
-                lines.append(f'    {var} = R.{d["carrier"]}(name="{var}")')
-                lines.append(f"    deck.assign_child_resource({var}, rails={d['rails']})")
-            lines.append(f'    {d["name"]} = R.{d["resource"]}(name="{d["name"]}")')
-            lines.append(f"    {carriers[key]}[{d['site']}] = {d['name']}")
-        names = ", ".join(f'"{d["name"]}": {d["name"]}' for d in data["deck"])
-        lines.append(f"    labware = {{{names}}}")
+            ckey = json.dumps(f"{d['carrier']}_rails_{d['rails']}")
+            if key not in seen:
+                seen.add(key)
+                lines.append(f"    carriers[{ckey}] = R.{d['carrier']}(name={ckey})")
+                lines.append(
+                    f"    deck.assign_child_resource(carriers[{ckey}], rails={d['rails']})"
+                )
+            name = json.dumps(d["name"])
+            lines.append(f"    labware[{name}] = R.{d['resource']}(name={name})")
+            lines.append(f"    carriers[{ckey}][{d['site']}] = labware[{name}]")
         for reagent, src in data.get("sources", {}).items():
             lines.append(
-                f'    labware["{src["labware"]}"].get_well("{src["well"]}").set_volume('
+                f"    labware[{json.dumps(src['labware'])}].get_well({json.dumps(src['well'])}).set_volume("
                 f"{fmt_code(src['volume_ul'])})  # {reagent}"
             )
         for c in data["calls"]:
@@ -230,16 +244,17 @@ class TecanEVO:
                 lines.append(f"    # {c['text']}")
             elif op == "pick_up_tip":
                 lines.append(
-                    f'    await lh.pick_up_tips([{c["rack"]}.get_item("{c["spot"]}")], use_channels=[{c["channel"]}])'
+                    f"    await lh.pick_up_tips([labware[{json.dumps(c['rack'])}].get_item({json.dumps(c['spot'])})], "
+                    f"use_channels=[{c['channel']}])"
                 )
             elif op == "aspirate":
                 lines.append(
-                    f'    await lh.aspirate([{c["labware"]}.get_well("{c["well"]}")], '
+                    f"    await lh.aspirate([labware[{json.dumps(c['labware'])}].get_well({json.dumps(c['well'])})], "
                     f"vols=[{fmt_code(c['volume_ul'])}], use_channels=[{c['channel']}])"
                 )
             elif op == "dispense":
                 lines.append(
-                    f'    await lh.dispense([{c["labware"]}.get_well("{c["well"]}")], '
+                    f"    await lh.dispense([labware[{json.dumps(c['labware'])}].get_well({json.dumps(c['well'])})], "
                     f"vols=[{fmt_code(c['volume_ul'])}], use_channels=[{c['channel']}])"
                 )
             elif op == "drop_tip":
@@ -355,11 +370,7 @@ async def _execute(data: dict, workcell: Workcell, state: _RunState) -> None:
 
     by_channel = {channel_of(p.mount): p.name for p in workcell.pipettes}
     holding: dict[int, str] = {}
-    plate_names = {
-        e.name
-        for e in workcell.deck
-        if labware.get(e.labware) and labware.get(e.labware).kind == "plate"
-    }
+    target = data.get("plate", "plate")
     for call in data["calls"]:
         state.current = call
         op = call["op"]
@@ -397,14 +408,15 @@ async def _execute(data: dict, workcell: Workcell, state: _RunState) -> None:
             raise ValueError(f"unknown call '{op}'")
     state.current = None
 
-    for name in plate_names:
-        plate = resources.get(name)
-        if plate is None:
-            continue
+    # Read back the tracked volumes of the plan's plate only. Other plates on
+    # the deck (a stock plate, say) are not part of the plan.
+    plate = resources.get(target)
+    if plate is not None:
+        prefix = f"{plate.name}_well_"
         for well in plate.children:
             used = well.tracker.get_used_volume()
             if used:
-                short = well.name.rsplit("_", 1)[-1]
+                short = well.name[len(prefix) :] if well.name.startswith(prefix) else well.name
                 state.well_volumes[short] = float(used)
 
 
@@ -418,7 +430,7 @@ def map_error(exc: BaseException, call: dict | None) -> PlanError:
             code = mapped
             break
     op = (call or {}).get("op")
-    if kind in ("NoTipError", "HasTipError") and op == "pick_up_tip":
+    if kind == "NoTipError" and op == "pick_up_tip":
         code = "SIM_OUT_OF_TIPS"
     if kind == "KeyError" and op == "load":
         code = "SIM_DECK_CONFLICT"
