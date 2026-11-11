@@ -94,3 +94,43 @@ library, or where a fallback was taken. Open problems are at the end.
 - Run records keep home folder paths out: `check.json` names the protocol by file name, `state.json` stores paths relative to the working folder or the repository when it can, and `summary.md` shows the run folder relative to the working folder.
 - Resuming a run that already rests (awaiting approval, needing a person, approved, rejected) rewrites its `summary.md`, in case a crash came between the state change and the summary.
 - The planner's workcell summary lists tips per rack, so a rack shared by two pipettes is counted once.
+
+## Stage 3
+
+- The ground truth, checked by `test_ground_truth_matches_the_published_numbers`, reproduces every Appendix C number: maximum 86.04% at 6.5 mol %, 1.75 equivalents, 20% co-solvent; 13 conditions within 3 points and 29 within 5; reference control 50.61%; negative control 0.
+- Appendix C's optimizer and random reference numbers hold the surface at seed 0 and vary only the campaign seed. The benchmark protocol (SPEC 9.10) gives each seed its own surface. The two are different experiments. `labauto benchmark --surface-seed 0` runs the Appendix C version, and its output is in `docs/benchmark_check.md`.
+- For surface seed 0 the reference control's expected value is the assay's `yield_center` (50). For any other surface it is recomputed from the surface, as SPEC 9.2 says.
+- A condition leaves the candidate list once it has at least one valid measurement. Conditions whose only plate failed quality checks stay candidates, because nothing valid is known about them.
+- The model decider counts any condition already put on a plate (valid or not) toward its 2-repeat limit.
+- A model decider turn that asks for a tool after the 6-call limit counts as an invalid answer. So does an unreadable reply. Each round therefore ends after at most 6 tool calls and 3 invalid answers.
+- The model decider's prompt names N in the user message ("Pick N = 8 conditions"). The system prompt is Appendix B's text unchanged.
+- Peak areas are written with 4 decimals, so the analysis reads back the raw peak table with no loss that matters (zero noise recovers the true yield to 1e-6).
+- The campaign's analysis step reads `raw/lcms_peaks.csv` back from disk, so the results come from the raw data file, not from values held in memory.
+- `results_all.csv` holds as-designed (`designed_<factor>`) and as-run (`asrun_<factor>`) values side by side. `decided_by` is `lhs` for round 1, else the strategy, plus the model name and any fallback.
+- A round's approval is checked again just before the plate is read: both hashes are recomputed from the round's files, and a mismatch voids the approval and waits for a person.
+- `labauto approve <campaign>` approves the round the campaign waits on, and `labauto resume <campaign>` continues it. Under the envelope policy, the person's approval of round 1 creates `envelope.json`. A later person approval keeps the existing envelope.
+- Under `auto_demo` every round is approved by the scripted approver, labelled `demo_auto` in `approval.json`, the round summary, and the report.
+- The benchmark's fast path keeps the same decider, LC/MS, analysis, and quality checks as the full loop. Only compile, simulate, and the ledger check are skipped.
+- The model strategy in the benchmark needs a live endpoint. None was available, so it was not run, and `docs/benchmark.md` says so.
+- The demo's model decider rows replay a scripted session (`examples/recordings/decider.scripted.jsonl`, made from `examples/scripted/decider.json`). Its picks are the corners of two fixed coarse grids, chosen without looking at any data or at the hidden surface. Every pick says "scripted pick" or "scripted repeat", and the demo, the round summaries, and the report say it is scripted. A first draft of these picks clustered near the known optimum and was replaced, because a scripted stand in must not use knowledge the model would not have.
+- Stage 3 data contracts (Decision, History, QcReport, CampaignConfig, Envelope, CampaignState) live in `models.py`. Models used only inside one module (LC/MS settings, readings, the decider's reply shape) stay in that module.
+- The optimizer's `results` tool takes an argument named `round`, as the model sees it. Inside that function the builtin `round` is reached through `builtins`.
+- The approval envelope compares what a round will really run with what the person approved: the assay and workcell ids in the round's own design, and sha256 hashes of the assay and workcell files taken at approval. A swapped or edited workcell file sends the round to a person.
+- The envelope's automatic round is charged before the round's approval is written. If a crash falls between the two, the next round goes to a person one round early; that errs toward a person. A round whose approval is already on file, with hashes that still match, is not decided or charged again on resume.
+- Rows for a round are appended to `results_all.csv` only if none for that round are there yet, and `state.json` is saved right after, so a crash cannot duplicate a round.
+- A model decider tool call with unusable arguments (a missing factor, a word where a number goes) is sent back to the model as an error and counts as an invalid answer, so the 2 retries and the fallback still apply. A pick with an empty reason is invalid.
+- With fewer than 2 conditions that have valid measurements, the optimizer has no model. `suggest` then draws a Latin hypercube from untested conditions and returns no prediction, rather than a made up 0 +/- 1. With no untested conditions left, `suggest` returns nothing.
+- Round 1's decision is recorded with strategy `lhs` and its design with `created_by.role` `code`, whatever the campaign's strategy.
+- Round summaries and the report say who decided and who wrote any note: code, a scripted client, or a named model. "Model written" is used only for a real model.
+- The model note is requested at the end of a campaign only when a live client is configured, and on demand with `labauto report <campaign> --note --client ...`. The note goes through the router's `report_note` role and is recorded in the campaign's `transcript.jsonl`. No endpoint was available, so no campaign here carries a model note.
+- The note number check counts every run of digits, with a leading dot or inside a word, and scientific notation as one number, so a number cannot pass by its spelling. An empty note gets its own rejection line.
+- `--fault` accepts only `injection_failure` and `plate_drift@R` with R inside the campaign; anything else is refused before the campaign starts.
+- The benchmark counts model decider rounds that fell back to the optimizer and prints the count beside the model row. Its plot link is relative to the page, and the exact command names `--out` and `--png` whenever they differ from the defaults.
+- `MemoryStore` was removed. The benchmark keeps its rows in a plain list, and `LocalStore` is the one Store implementation, as SPEC 9.5 says.
+
+## Open problems
+
+- No model has run. Every model path (planner, hosted rung, model decider, report note) is built and tested with scripted clients only. Live results are pending: the planner evaluation (`docs/planner_eval.md`), recorded model sessions in `examples/recordings/`, the model decider row of the benchmark, and a model note in any campaign report. Each needs `labauto eval-planner`, `labauto plan`, `labauto benchmark`, or `labauto loop --strategy model` run against a configured endpoint.
+- The model decider's prompt and the 120 word report note limit have never met a real model, so how often real replies need the retries and the fallback is unknown.
+- PyLabRobot's `DiTi_*_LiHa` tip definitions warn that their total tip length is zero or less. This does not affect the bookkeeping here, but a backend driving real hardware would need correct tip definitions.
+- No stage hit the stuck rule (three failed approaches to one problem). Stage 1b finished well inside its effort cap.

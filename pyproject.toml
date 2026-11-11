@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "labauto"
-version = "0.2.0"
+version = "0.3.0"
 description = "A checked path from a model's experiment idea to a liquid handler protocol, with a simulated closed loop."
 readme = "README.md"
 license = "MIT"

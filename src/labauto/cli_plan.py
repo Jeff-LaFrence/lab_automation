@@ -20,6 +20,13 @@ from labauto.orchestrator import RESTING, Clients, load_state, resume, run_summa
 from labauto.record import portable
 
 EXIT_OK, EXIT_HUMAN, EXIT_INTERNAL = 0, 1, 2
+
+
+def is_campaign(path: str | Path) -> bool:
+    """A campaign folder holds campaign.json. A planned run holds request.txt."""
+    return (Path(path) / "campaign.json").exists()
+
+
 DEMO_SCENARIOS = ["01_simple_factorial", "02_too_big", "03_out_of_range"]
 NO_ENDPOINT = (
     "No model endpoint is configured. Copy .env.example to .env and set LABAUTO_MAIN_BASE_URL, "
@@ -110,6 +117,11 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 def cmd_status(args: argparse.Namespace) -> int:
     run_dir = Path(args.run)
+    if is_campaign(run_dir):
+        from labauto.campaign import campaign_status
+
+        print(campaign_status(run_dir))
+        return EXIT_OK
     if load_state(run_dir).state == "APPROVED":
         verify(run_dir)
         if load_state(run_dir).state != "APPROVED":
@@ -119,6 +131,10 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_approve(args: argparse.Namespace) -> int:
+    if is_campaign(args.run):
+        from labauto.cli_loop import approve_campaign_cmd
+
+        return approve_campaign_cmd(Path(args.run), args.by, args.comment or "")
     try:
         approval = approve(Path(args.run), by=args.by, comment=args.comment or "")
     except ApprovalError as exc:
@@ -141,6 +157,10 @@ def cmd_reject(args: argparse.Namespace) -> int:
 
 def cmd_resume(args: argparse.Namespace) -> int:
     run_dir = Path(args.run)
+    if is_campaign(run_dir):
+        from labauto.cli_loop import resume_campaign_cmd
+
+        return resume_campaign_cmd(run_dir, args.client)
     st = load_state(run_dir)
     if st.state in RESTING:
         resume(run_dir, Clients(local=None), Settings())  # rewrites summary.md if a crash lost it

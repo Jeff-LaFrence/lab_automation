@@ -6,7 +6,7 @@ A checked path from a model's experiment idea to a liquid handler protocol, with
 
 Language models can now propose experiments, but a proposal is not something a liquid handling robot can run, and not something a lab should trust without checks.
 This repository is the layer in between: fixed code turns a short experiment design into a checked, simulated liquid handler protocol, and a person stays at the approval step.
-The plan is to close the loop with a simulated analytical instrument, so that a model can choose the next round from the data.
+It then closes the loop with a simulated analytical instrument, so that a decider can choose the next round from the data.
 
 Everything here runs in simulation. See [Limits](#limits) and the [status table](#what-is-real-and-what-is-simulated).
 
@@ -24,18 +24,17 @@ flowchart TD
     R3 --> INST["INSTRUMENT SLOT<br/>compile, then the vendor's simulator"]
     INST --> LED{{"Ledger check<br/>simulated dispenses against the plan"}}
     LED --> APP["Approval<br/>a person sees every change from the request"]
-    APP --> LCMS["Simulated LC/MS reads what was dispensed"]:::todo
-    LCMS --> STORE["STORE SLOT<br/>results with as-designed and as-run values"]:::todo
-    STORE --> DEC["DECIDER SLOT<br/>random, optimizer, or model with tools"]:::todo
+    APP --> LCMS["Simulated LC/MS reads what was dispensed"]
+    LCMS --> STORE["STORE SLOT<br/>results with as-designed and as-run values"]
+    STORE --> DEC["DECIDER SLOT<br/>random, optimizer, or model with tools"]
     DEC --> DES
     R1 -. "structured errors" .-> PLANNER
     R2 -. "structured errors" .-> PLANNER
     R3 -. "structured errors" .-> PLANNER
     LED -. "structured errors" .-> PLANNER
-    classDef todo stroke-dasharray: 6 4
 ```
 
-Dashed boxes are not built yet. The four slots (planner, instrument, store, decider) sit behind small interfaces so each can be swapped.
+Every box is built, in simulation. The four slots (planner, instrument, store, decider) sit behind small interfaces so each can be swapped.
 
 ## See it run
 
@@ -73,6 +72,24 @@ Source of 01_simple_factorial: scripted session (hand-written replies, not a mod
 Source of 02_too_big: scripted session (hand-written replies, not a model).
 Source of 03_out_of_range: scripted session (hand-written replies, not a model).
 A person approves with labauto approve <run>. Nothing here was approved.
+
+Stage 3: closed loop, full path (compile, simulate, ledger check, simulated LC/MS)
+
+optimizer: DONE after 3 rounds. Every round approved by demo_auto (no person).
+| Round | Best measured mean so far (%) | Quality events | Approval | Fallback | Decided by |
+|---|---|---|---|---|---|
+| 1 | 73.3 | none | demo_auto | none | shared Latin hypercube (code) |
+| 2 | 87.4 | IS_OUT_OF_RANGE | demo_auto | none | optimizer (code) |
+| 3 | 87.4 | IS_OUT_OF_RANGE | demo_auto | none | optimizer (code) |
+The condition with the highest measured mean: catalyst_mol_pct 7.0, base_equiv 1.75, cosolvent_pct 20.0, mean 87.4% over 3 valid wells.
+
+model decider, scripted session (hand-written replies, not a model): DONE after 3 rounds. Every round approved by demo_auto (no person).
+| Round | Best measured mean so far (%) | Quality events | Approval | Fallback | Decided by |
+|---|---|---|---|---|---|
+| 1 | 73.3 | none | demo_auto | none | shared Latin hypercube (code) |
+| 2 | 73.3 | IS_OUT_OF_RANGE | demo_auto | none | scripted client (hand-written replies, not a model) |
+| 3 | 73.3 | IS_OUT_OF_RANGE | demo_auto | none | scripted client (hand-written replies, not a model) |
+The condition with the highest measured mean: catalyst_mol_pct 3.5, base_equiv 1.75, cosolvent_pct 25.0, mean 73.3% over 3 valid wells.
 ```
 
 In the first table, each row is one input sent through the check pipeline. The Tecan row sends the same design to a second workcell, a Tecan EVO, and confirms the plan is identical: only the instrument backend changes. Every failure is caught at a named layer, with the numbers that explain it. The run folders land in `runs/`. One of them is committed as [examples/sample_run/](examples/sample_run/).
@@ -149,6 +166,70 @@ To approve: `labauto approve runs/readme02/20261111T060027Z_284c`    To reject: 
 
 Below that, the summary lists what would be run, reagent use, tips, and each check. `approval.json` records who approved, when, and the design and protocol hashes. If either file changes after approval, the approval is void.
 
+## The closed loop
+
+Each round, a decider picks conditions, code builds the design, and the plate
+goes through the same checked path as any other design. Then a simulated LC/MS
+reads what the simulator says was dispensed, and the results feed the next
+decision.
+
+```mermaid
+flowchart LR
+    DEC["Decider<br/>random, optimizer, or model with tools"] --> DES["Design<br/>explicit conditions, controls on"]
+    DES --> CHK{{"Check pipeline<br/>rules, compile, simulate, ledger"}}
+    CHK --> APP["Approval<br/>person, envelope, or demo_auto"]
+    APP --> MS["Simulated LC/MS<br/>reads the ledger, writes raw peaks"]
+    MS --> QC{{"Analysis and quality checks<br/>controls on every plate"}}
+    QC --> ST["Store<br/>results_all.csv"]
+    ST --> DEC
+```
+
+Round 1 is the same Latin hypercube for every strategy. The yield surface
+behind the simulated LC/MS is made up and hidden from every decider. With the
+`envelope` approval policy, a person approves round 1, and later rounds are
+approved automatically while the plate size, assay, and workcell stay the
+same and nothing unusual happened; a failed plate or a decider fallback sends
+the next round back to a person. The plate and tips are assumed fresh each
+round, and reagents topped up.
+
+A campaign report excerpt, from `labauto loop --strategy optimizer --approval auto_demo` (6 rounds, full path):
+
+- brief: Find the condition with the highest yield.
+- strategy: optimizer; rounds: 6; conditions per round: 8; replicates: 3
+- seed: 1; surface seed: 0; approval: auto_demo; faults: injection_failure
+- assay: generic_reaction_screen_v1; workcell: ot2_bench; state: DONE
+
+| Round | Best measured mean so far (%) | Quality events | Approval | Fallback | Decided by |
+|---|---|---|---|---|---|
+| 1 | 73.3 | none | demo_auto | none | shared Latin hypercube (code) |
+| 2 | 87.4 | IS_OUT_OF_RANGE | demo_auto | none | optimizer (code) |
+| 3 | 87.4 | IS_OUT_OF_RANGE | demo_auto | none | optimizer (code) |
+| 4 | 87.4 | none | demo_auto | none | optimizer (code) |
+| 5 | 87.4 | IS_OUT_OF_RANGE | demo_auto | none | optimizer (code) |
+| 6 | 87.4 | none | demo_auto | none | optimizer (code) |
+
+Top 5 conditions:
+
+| Condition | Mean (%) | SD | n | Flags |
+|---|---|---|---|---|
+| catalyst_mol_pct 7.0, base_equiv 1.75, cosolvent_pct 20.0 | 87.4 | 3.6 | 3 | none |
+| catalyst_mol_pct 8.0, base_equiv 1.75, cosolvent_pct 20.0 | 86.9 | 2.0 | 2 | IS_OUT_OF_RANGE |
+| catalyst_mol_pct 6.5, base_equiv 1.75, cosolvent_pct 20.0 | 86.6 | 2.2 | 3 | none |
+| catalyst_mol_pct 6.0, base_equiv 1.75, cosolvent_pct 20.0 | 86.6 | 3.1 | 3 | none |
+| catalyst_mol_pct 6.5, base_equiv 1.75, cosolvent_pct 25.0 | 85.2 | 5.1 | 3 | none |
+
+The condition with the highest measured mean: catalyst_mol_pct 7.0, base_equiv 1.75, cosolvent_pct 20.0, mean 87.4% over 3 valid wells.
+
+Measured means include the simulated instrument noise, so a mean can sit above the hidden surface's true optimum. The benchmark below scores recommendations by their true yield instead.
+
+Traceability, first rows. The report lists every well behind the recommendation, with the hashes of the design and protocol that made it:
+
+| Run folder | Well | Yield (%) | Excluded | Design hash | Protocol hash |
+|---|---|---|---|---|---|
+| rounds/02 | F1 | 89.3 | false | a03b01b93099e8a4 | ef3758320dd3f2a3 |
+| rounds/02 | D3 | 83.2 | false | a03b01b93099e8a4 | ef3758320dd3f2a3 |
+| rounds/02 | A4 | 89.6 | false | a03b01b93099e8a4 | ef3758320dd3f2a3 |
+
 ## The planner and the ladder
 
 A model fills one role: it writes a short design as JSON. Everything else is code (P1).
@@ -186,14 +267,35 @@ Commands: `labauto plan "<request>"`, `labauto status <run>`, `labauto approve <
 | Opentrons OT-2 protocol generation | built, checked in the vendor's simulator, never run on a robot |
 | Tecan EVO backend | built, bookkeeping simulation only |
 | Planner agent, repair, escalation, approval | built and tested with scripted clients; live results pending (no model server was available when this was built) |
-| LC/MS readout | not built |
-| Closed loop | not built |
+| LC/MS readout | simulated, synthetic data |
+| Closed loop | built, simulated |
+| Model decider, report model note | built and tested with scripted clients; live results pending (no model server was available when this was built) |
 | Service API, skill library | not built |
 | Real hardware, LIMS or ELN, cluster deployment | not built |
 
 ## Results
 
 Planner evaluation: live results pending. `labauto eval-planner --trials 5` runs the five scenarios in `examples/requests/` against the configured model and writes `docs/planner_eval.md`. That file does not exist yet, because no model endpoint was available when this was built. No planner numbers are published until a real run makes them.
+
+Closed loop benchmark, from `labauto benchmark --strategies random,optimizer,model --seeds 30 --model-seeds 3 --rounds 6` ([docs/benchmark.md](docs/benchmark.md)). Each of 30 seeds is a different synthetic surface. The score is the true yield of each round's recommendation. This run used the fast path: the plan's volumes stand in for the simulator's ledger.
+
+![Benchmark](docs/img/benchmark.png)
+
+Mean true yield of the recommendation (%):
+
+| Strategy | Seeds | Round 1 | Round 2 | Round 3 | Round 4 | Round 5 | Round 6 |
+|---|---|---|---|---|---|---|---|
+| random | 30 | 59.7 | 64.5 | 68.5 | 71.7 | 73.7 | 76.9 |
+| optimizer | 30 | 59.7 | 66.7 | 74.6 | 81.0 | 81.7 | 81.8 |
+
+Share of seeds within 3 points of the optimum:
+
+| Strategy | Seeds | Round 1 | Round 2 | Round 3 | Round 4 | Round 5 | Round 6 |
+|---|---|---|---|---|---|---|---|
+| random | 30 | 0.07 | 0.17 | 0.20 | 0.30 | 0.30 | 0.37 |
+| optimizer | 30 | 0.07 | 0.27 | 0.43 | 0.80 | 0.97 | 1.00 |
+
+Mean true optimum over the 30 surfaces: 82.3%. On these surfaces the optimizer found a near optimal condition on every seed by round 6, and random search did on about a third. The model decider was not run, because no model endpoint was available; the model rows are pending. A check against the reference numbers in SPEC.md Appendix C, which hold the surface fixed, is in [docs/benchmark_check.md](docs/benchmark_check.md) (`labauto benchmark --strategies random,optimizer --seeds 12 --model-seeds 3 --rounds 6 --surface-seed 0 --out docs/benchmark_check.md --png docs/img/benchmark_check.png`).
 
 ## Plug in your own
 
@@ -203,8 +305,8 @@ The four slots:
 |---|---|---|
 | Planner | `propose(client, label, messages, first=True) -> ChatResult` holding a `PlannerOutput` | live (OpenAI-compatible), hosted, scripted, and replay clients |
 | Instrument | `compile(worklist, workcell, plan, out_dir) -> Path`, `simulate(artifact, workcell) -> SimResult` | Opentrons OT-2, Tecan EVO (simulated) |
-| Decider | `decide(history, n, brief, seed) -> Decision` | not yet |
-| Store | `append_results`, `load_results`, `save_record` | not yet |
+| Decider | `decide(history, n, brief, seed) -> Decision` | random, optimizer (Gaussian process), model with the optimizer as a tool |
+| Store | `append_results`, `load_results`, `save_record` | local files (CSV and JSON); a LIMS or ELN adapter is the open slot, not built |
 
 To point the planner at another model, copy `.env.example` to `.env` and set the main endpoint. Any OpenAI-compatible chat server works, for example a local llama.cpp server:
 
@@ -229,12 +331,14 @@ Nothing upstream changes: the design, plan, and worklist are vendor neutral.
 ## Limits
 
 - Simulation only. No physical run has been made with this code.
+- The reaction data is synthetic. The yield surface is a made up function, chosen to have an interior optimum, and the LC/MS readings are simulated from it.
 - An OT-2 with organic solvents is a poor match in practice: volatile liquids drip and some plastics do not hold up. Real reaction screening runs on other hardware. That is the reason the instrument is a slot.
 - One liquid handling rule stands in for liquid classes. Real methods need calibrated liquid classes, labware definitions taught on the actual deck, and mixing steps.
 - The Tecan backend checks volumes and tips, not collisions, calibration, liquid classes, or timing. It runs on PyLabRobot's bookkeeping simulator and has never driven a real instrument.
 - The Opentrons simulator does not catch an overfilled well, a volume below a pipette's minimum, or a source well drawn dry. Rules in this repository catch those. See [docs/tooling_notes.md](docs/tooling_notes.md).
+- Plates and tips are assumed fresh each round, and reagents topped up between rounds.
 - No scheduler, no multi-instrument coordination, no sample tracking system.
-- Results depend on the planner model. No model has run yet: the planner rows in the demo replay scripted sessions, and the planner evaluation is pending.
+- Results depend on the planner model. No model has run yet: the planner rows and the model decider rows in the demo replay scripted sessions, and the planner evaluation and the model decider benchmark are pending.
 
 ## What real hardware would add
 
@@ -248,18 +352,21 @@ Nothing upstream changes: the design, plan, and worklist are vendor neutral.
 
 ## How this was built
 
-Designed and directed by the repository owner. The code was written with an AI coding assistant from a written specification, [SPEC.md](SPEC.md) in this repository. The planner is written to run on a local open-weight model, but no model server was available when this was built, so live results are pending. Everything is tested in simulation only.
+Designed and directed by the repository owner. The code was written with an AI coding assistant from a written specification, [SPEC.md](SPEC.md) in this repository. The planner and the model decider are written to run on a local open-weight model, but no model server was available when this was built, so live results are pending. Everything is tested in simulation only.
 
 ## Docs
 
+- [docs/concepts.md](docs/concepts.md): the vocabulary, and short answers to the questions people ask first.
+- [docs/walkthrough.md](docs/walkthrough.md): one request followed from text to a protocol, with the real files, and three edits to break it yourself.
 - [docs/tooling_notes.md](docs/tooling_notes.md): what each simulator checks and misses, with the tests that prove each point.
+- [docs/benchmark.md](docs/benchmark.md) and [docs/benchmark_check.md](docs/benchmark_check.md): the closed loop benchmark and the check against SPEC.md Appendix C.
 - [docs/decisions.md](docs/decisions.md): choices made where the specification was silent, and open problems.
 
 ## Background
 
 - Opentrons Python Protocol API: https://docs.opentrons.com/v2/
 - PyLabRobot: https://docs.pylabrobot.org (used for the Tecan EVO simulation)
-- Self-Building Labs: https://self-building-labs.github.io/ (arXiv 2610.23826). That work builds lab capabilities in simulation before physical trials and saves validated skills for reuse. This repository borrows the simulate first habit.
+- Self-Building Labs: https://self-building-labs.github.io/ (arXiv 2610.23826). That work builds lab capabilities in simulation before physical trials and saves validated skills for reuse. This repository borrows the simulate first habit. The skill library idea is a Stage 4 item and is not built.
 
 ## License
 
