@@ -1,0 +1,37 @@
+{
+  "design_id": "d-example-good-factorial",
+  "assay_id": "generic_reaction_screen_v1",
+  "workcell_id": "ot2_bench",
+  "title": "Catalyst loading by base equivalents at 20% co-solvent",
+  "grid": {
+    "catalyst_mol_pct": [
+      1.0,
+      2.0,
+      4.0,
+      8.0
+    ],
+    "base_equiv": [
+      1.0,
+      1.5,
+      2.0
+    ],
+    "cosolvent_pct": [
+      20.0
+    ]
+  },
+  "conditions": null,
+  "replicates": 3,
+  "include_controls": true,
+  "layout": {
+    "strategy": "randomized",
+    "seed": 7
+  },
+  "deviations": [],
+  "assumptions": [],
+  "notes": "",
+  "created_by": {
+    "role": "person",
+    "model": null,
+    "rung": null
+  }
+}
