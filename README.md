@@ -94,7 +94,7 @@ The condition with the highest measured mean: catalyst_mol_pct 3.5, base_equiv 1
 
 In the first table, each row is one input sent through the check pipeline. The Tecan row sends the same design to a second workcell, a Tecan EVO, and confirms the plan is identical: only the instrument backend changes. Every failure is caught at a named layer, with the numbers that explain it. The run folders land in `runs/`. One of them is committed as [examples/sample_run/](examples/sample_run/).
 
-The second table replays three planner sessions. **No model has run yet.** These sessions are scripted: the planner's replies were written by hand to exercise the repair loop, and the demo says so in its output. Everything after each reply (the checks, the repair prompts, the ladder, the approval summary) is the real code. When a model endpoint is configured, `labauto demo --live` runs the same scenarios against it, and recorded live sessions in `examples/recordings/` replace the scripted ones.
+The second table replays three planner sessions. These sessions are scripted: the planner's replies were written by hand to exercise the repair loop, and the demo says so in its output. Everything after each reply (the checks, the repair prompts, the ladder, the approval summary) is the real code. The planner has also run live on a local model, and the measured results are in [Results](#results). `labauto demo --live` runs the same scenarios against the configured endpoint.
 
 ## How a bad plan gets caught
 
@@ -165,6 +165,33 @@ To approve: `labauto approve runs/readme02/20261111T060027Z_284c`    To reject: 
 ```
 
 Below that, the summary lists what would be run, reagent use, tips, and each check. `approval.json` records who approved, when, and the design and protocol hashes. If either file changes after approval, the approval is void.
+
+### The same request on a local model
+
+This is a live run of the same request on qwen3.8:27b served by Ollama: trial 1 of the planner evaluation, not picked for the example. The model did the arithmetic right on its first try and cut to 2 replicates. But the JSON it returned named two factors `encoding` and `encoding_pct`. Its own reasoning, recorded in the transcript, used the right names, `base_equiv` and `cosolvent_pct`. The design rules caught the slip as `UNKNOWN_FACTOR` and `MISSING_FACTOR`, the errors went back, and the second attempt passed. The top of its `summary.md`:
+
+```
+# Run 20261111T172718Z_f197: AWAITING_APPROVAL
+
+## Request
+
+> "Test every catalyst loading from 1 to 10 mol % in 1 % steps against base at 1.0, 1.5, 2.0 and 2.5 equivalents, 20% co-solvent, in triplicate."
+
+## Changes from what was asked
+
+From the planner's deviations list.
+
+- asked: triplicate (3 replicates)   planned: duplicate (2 replicates)   why: 10 catalyst × 4 base = 40 conditions; 40 × 3 = 120 sample wells exceeds the 92 available with controls. Reducing to 2 replicates gives 80 sample wells (84 total with 4 control wells), which fits.
+
+## Assumptions
+
+- cosolvent_pct fixed at 20.0 % v/v as specified in the request
+
+## How we got here
+
+- attempt 1  local-main (qwen3.8:27b)  failed  MISSING_FACTOR, UNKNOWN_FACTOR
+- attempt 2  local-main (qwen3.8:27b)  passed
+```
 
 ## The closed loop
 
@@ -266,16 +293,26 @@ Commands: `labauto plan "<request>"`, `labauto status <run>`, `labauto approve <
 | Design, plan, worklist, validators | built and tested |
 | Opentrons OT-2 protocol generation | built, checked in the vendor's simulator, never run on a robot |
 | Tecan EVO backend | built, bookkeeping simulation only |
-| Planner agent, repair, escalation, approval | built and tested with scripted clients; live results pending (no model server was available when this was built) |
+| Planner agent, repair, escalation, approval | built and tested; run live on a local model (qwen3.8:27b through Ollama), results in [docs/planner_eval.md](docs/planner_eval.md); the hosted rung has not run live (no hosted model configured) |
 | LC/MS readout | simulated, synthetic data |
 | Closed loop | built, simulated |
-| Model decider, report model note | built and tested with scripted clients; live results pending (no model server was available when this was built) |
+| Model decider, report model note | built and tested with scripted clients; live results pending (not yet run on the local model) |
 | Service API, skill library | not built |
 | Real hardware, LIMS or ELN, cluster deployment | not built |
 
 ## Results
 
-Planner evaluation: live results pending. `labauto eval-planner --trials 5` runs the five scenarios in `examples/requests/` against the configured model and writes `docs/planner_eval.md`. That file does not exist yet, because no model endpoint was available when this was built. No planner numbers are published until a real run makes them.
+Planner evaluation, from `labauto eval-planner --trials 5` on qwen3.8:27b served by Ollama on one 32 GB GPU ([docs/planner_eval.md](docs/planner_eval.md)). Each of the five scenarios in `examples/requests/` ran 5 times:
+
+| Scenario | Trials | Valid first try | Valid after local repairs | Went to hosted | Handed to person | Deviations declared when needed | Median seconds | Failed (internal error) |
+|---|---|---|---|---|---|---|---|---|
+| 01_simple_factorial | 5 | 5 | 5 | 0 | 0 | n/a | 42.7 | 0 |
+| 02_too_big | 5 | 4 | 5 | 0 | 0 | 5 of 5 passing | 57.5 | 0 |
+| 03_out_of_range | 5 | 5 | 5 | 0 | 0 | 5 of 5 passing | 38.8 | 0 |
+| 04_ambiguous | 5 | 5 | 5 | 0 | 0 | n/a | 35.7 | 0 |
+| 05_reagent_limit | 5 | 4 | 5 | 0 | 0 | 5 of 5 passing | 86.4 | 0 |
+
+Every trial ended with a valid design without leaving the local rung. The failure notes in the evaluation page list each mistake the checks caught. The same evaluation on qwen2.5-coder:32b ([docs/planner_eval_qwen2.5-coder-32b.md](docs/planner_eval_qwen2.5-coder-32b.md)) was faster but never solved scenario 05, which went to a person in all 5 trials. Five trials per scenario show large differences, not small ones.
 
 Closed loop benchmark, from `labauto benchmark --strategies random,optimizer,model --seeds 30 --model-seeds 3 --rounds 6` ([docs/benchmark.md](docs/benchmark.md)). Each of 30 seeds is a different synthetic surface. The score is the true yield of each round's recommendation. This run used the fast path: the plan's volumes stand in for the simulator's ledger.
 
@@ -295,7 +332,7 @@ Share of seeds within 3 points of the optimum:
 | random | 30 | 0.07 | 0.17 | 0.20 | 0.30 | 0.30 | 0.37 |
 | optimizer | 30 | 0.07 | 0.27 | 0.43 | 0.80 | 0.97 | 1.00 |
 
-Mean true optimum over the 30 surfaces: 82.3%. On these surfaces the optimizer found a near optimal condition on every seed by round 6, and random search did on about a third. The model decider was not run, because no model endpoint was available; the model rows are pending. A check against the reference numbers in SPEC.md Appendix C, which hold the surface fixed, is in [docs/benchmark_check.md](docs/benchmark_check.md) (`labauto benchmark --strategies random,optimizer --seeds 12 --model-seeds 3 --rounds 6 --surface-seed 0 --out docs/benchmark_check.md --png docs/img/benchmark_check.png`).
+Mean true optimum over the 30 surfaces: 82.3%. On these surfaces the optimizer found a near optimal condition on every seed by round 6, and random search did on about a third. The model decider has not been run in the benchmark yet, so the model rows are pending. A check against the reference numbers in SPEC.md Appendix C, which hold the surface fixed, is in [docs/benchmark_check.md](docs/benchmark_check.md) (`labauto benchmark --strategies random,optimizer --seeds 12 --model-seeds 3 --rounds 6 --surface-seed 0 --out docs/benchmark_check.md --png docs/img/benchmark_check.png`).
 
 ## Plug in your own
 
@@ -338,7 +375,7 @@ Nothing upstream changes: the design, plan, and worklist are vendor neutral.
 - The Opentrons simulator does not catch an overfilled well, a volume below a pipette's minimum, or a source well drawn dry. Rules in this repository catch those. See [docs/tooling_notes.md](docs/tooling_notes.md).
 - Plates and tips are assumed fresh each round, and reagents topped up between rounds.
 - No scheduler, no multi-instrument coordination, no sample tracking system.
-- Results depend on the planner model. No model has run yet: the planner rows and the model decider rows in the demo replay scripted sessions, and the planner evaluation and the model decider benchmark are pending.
+- Results depend on the planner model. The planner evaluation covers two local models on five scenarios with 5 trials each. The demo's planner and model decider rows still replay scripted sessions, and the model decider has not run live.
 
 ## What real hardware would add
 
@@ -352,7 +389,7 @@ Nothing upstream changes: the design, plan, and worklist are vendor neutral.
 
 ## How this was built
 
-Designed and directed by the repository owner. The code was written with an AI coding assistant from a written specification, [SPEC.md](SPEC.md) in this repository. The planner and the model decider are written to run on a local open-weight model, but no model server was available when this was built, so live results are pending. Everything is tested in simulation only.
+Designed and directed by the repository owner. The code was written with an AI coding assistant from a written specification, [SPEC.md](SPEC.md) in this repository. The planner and the model decider are written to run on a local open-weight model. No model server was available when they were first built, so they were built and tested with scripted clients. The planner was later run live on a local model (qwen3.8:27b through Ollama); the model decider has not run live yet. Everything is tested in simulation only.
 
 ## Docs
 

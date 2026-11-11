@@ -250,3 +250,71 @@ def test_prompt_that_fits_nowhere_is_trimmed(tmp_path):
 
 def test_token_estimate_is_characters_over_four():
     assert estimate_tokens([{"content": "x" * 400}]) == 100
+
+
+def test_reply_schema_sent_to_the_server_requires_every_key():
+    """A grammar server lets a model skip optional keys; a local model then skipped "grid"."""
+    from labauto.agents.llm import wire_schema
+    from labauto.decide.model_decider import DeciderTurn
+
+    sent = wire_schema(PlannerOutput.model_json_schema())
+    design = sent["$defs"]["ModelDesign"]
+    assert design["required"] == list(design["properties"])
+    assert {"grid", "conditions", "include_controls", "notes"} <= set(design["required"])
+    assert sent["$defs"]["Deviation"]["required"] == ["requested", "planned", "reason"]
+    turn = wire_schema(DeciderTurn.model_json_schema())
+    assert turn["required"] == ["action", "tool", "args", "picks", "round_note"]
+    source = PlannerOutput.model_json_schema()
+    wire_schema(source)
+    assert "grid" not in source["$defs"]["ModelDesign"]["required"]  # the input is not changed
+
+
+def test_live_client_sends_the_all_required_schema():
+    LiveClient._structured.clear()
+    seen: list = []
+    client = LiveClient({"local-main": ENDPOINT}, transport=mock_server(True, seen))
+    chat(client, "local-main", [{"role": "user", "content": "u"}], PlannerOutput)
+    schema = seen[-1]["response_format"]["json_schema"]["schema"]
+    assert "grid" in schema["$defs"]["ModelDesign"]["required"]
+
+
+def one_reply_server(message: dict, finish_reason: str = "stop"):
+    """A mock server whose chat replies are all the given message."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/models"):
+            return httpx.Response(200, json={"data": [{"id": "mock-model"}]})
+        body = json.loads(request.content)
+        if body.get("max_tokens") == 32:
+            return httpx.Response(200, json={"choices": [{"message": {"content": '{"ok": true}'}}]})
+        return httpx.Response(
+            200, json={"choices": [{"message": message, "finish_reason": finish_reason}]}
+        )
+
+    return httpx.MockTransport(handler)
+
+
+def test_ollama_reasoning_field_is_recorded(tmp_path):
+    """Ollama returns thinking as "reasoning"; llama.cpp as "reasoning_content". Both are kept."""
+    LiveClient._structured.clear()
+    message = {"content": json.dumps(GOOD), "reasoning": "worked it out"}
+    client = LiveClient({"local-main": ENDPOINT}, transport=one_reply_server(message))
+    t = Transcript(tmp_path / "transcript.jsonl")
+    result = chat(
+        client, "local-main", [{"role": "user", "content": "u"}], PlannerOutput, transcript=t
+    )
+    assert result.parsed is not None
+    record = json.loads((tmp_path / "transcript.jsonl").read_text().splitlines()[0])
+    assert record["reasoning"] == "worked it out"
+
+
+def test_a_reply_cut_off_at_the_token_limit_says_so():
+    LiveClient._structured.clear()
+    message = {"content": '{"action": "submit_design", "design": {"title": "half'}
+    client = LiveClient({"local-main": ENDPOINT}, transport=one_reply_server(message, "length"))
+    result = chat(
+        client, "local-main", [{"role": "user", "content": "u"}], PlannerOutput, max_tokens=50
+    )
+    assert result.parsed is None
+    assert result.error.startswith("SCHEMA_INVALID")
+    assert "hit the 50 token limit" in result.error

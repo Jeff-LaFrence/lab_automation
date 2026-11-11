@@ -14,6 +14,7 @@ Client types:
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import re
@@ -26,6 +27,8 @@ from pydantic import BaseModel, ValidationError
 from labauto.config import Endpoint
 
 TIMEOUT_SECONDS = 600
+# Reasoning models spend part of this on thinking before the JSON; 4096 left too little room.
+DEFAULT_MAX_TOKENS = 12000
 
 
 class RawReply(BaseModel):
@@ -223,7 +226,7 @@ def chat(
     messages: list[dict],
     schema: type[BaseModel] | None = None,
     temperature: float = 0.3,
-    max_tokens: int = 4096,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
     *,
     transcript: Transcript | None = None,
     role: str = "planner",
@@ -239,7 +242,7 @@ def chat(
     reasoning removed, and an empty reply counts as a failure.
     """
     meta = dict(meta or {})
-    json_schema = schema.model_json_schema() if schema is not None else None
+    json_schema = wire_schema(schema.model_json_schema()) if schema is not None else None
     convo = list(messages)
     total = ChatResult(endpoint_label=label)
     for call in range(1, max(1, max_calls) + 1):
@@ -263,6 +266,8 @@ def chat(
             parsed, error = ({"text": body}, None) if body else (None, "the reply was empty")
         else:
             parsed, error = parse_reply(raw.text, schema)
+        if parsed is None and raw.stop_reason == "length":
+            error = f"the reply hit the {max_tokens} token limit before it finished ({error})"
         if recorded is None and transcript is not None:
             transcript.append(
                 {
@@ -307,6 +312,35 @@ def chat(
 
 
 # ---------------------------------------------------------------- clients
+
+
+def wire_schema(schema: dict) -> dict:
+    """The reply schema as sent to a server: every property is listed as required.
+
+    A server that turns the schema into a grammar (llama.cpp, Ollama) lets the
+    model leave out any optional property, and a local model will leave out
+    "grid" and "conditions" when it may. Requiring every key makes it write each
+    one, with null where null is allowed. Replies are still validated against
+    the pydantic model, so the defaults and rules there are unchanged.
+    """
+    out = copy.deepcopy(schema)
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            props = node.get("properties")
+            if isinstance(props, dict):
+                node["required"] = list(props)
+                for sub in props.values():
+                    walk(sub)
+            for key, value in node.items():
+                if key != "properties":
+                    walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(out)
+    return out
 
 
 def schema_instruction(schema: dict) -> str:
@@ -453,7 +487,8 @@ class LiveClient:
         usage = data.get("usage") or {}
         return RawReply(
             text=msg.get("content") or "",
-            reasoning=msg.get("reasoning_content") or "",
+            # llama.cpp calls it reasoning_content, Ollama calls it reasoning.
+            reasoning=msg.get("reasoning_content") or msg.get("reasoning") or "",
             prompt_tokens=int(usage.get("prompt_tokens") or 0),
             completion_tokens=int(usage.get("completion_tokens") or 0),
             model=data.get("model") or ep.model,
