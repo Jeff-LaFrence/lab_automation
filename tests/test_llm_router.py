@@ -276,3 +276,45 @@ def test_live_client_sends_the_all_required_schema():
     chat(client, "local-main", [{"role": "user", "content": "u"}], PlannerOutput)
     schema = seen[-1]["response_format"]["json_schema"]["schema"]
     assert "grid" in schema["$defs"]["ModelDesign"]["required"]
+
+
+def one_reply_server(message: dict, finish_reason: str = "stop"):
+    """A mock server whose chat replies are all the given message."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/models"):
+            return httpx.Response(200, json={"data": [{"id": "mock-model"}]})
+        body = json.loads(request.content)
+        if body.get("max_tokens") == 32:
+            return httpx.Response(200, json={"choices": [{"message": {"content": '{"ok": true}'}}]})
+        return httpx.Response(
+            200, json={"choices": [{"message": message, "finish_reason": finish_reason}]}
+        )
+
+    return httpx.MockTransport(handler)
+
+
+def test_ollama_reasoning_field_is_recorded(tmp_path):
+    """Ollama returns thinking as "reasoning"; llama.cpp as "reasoning_content". Both are kept."""
+    LiveClient._structured.clear()
+    message = {"content": json.dumps(GOOD), "reasoning": "worked it out"}
+    client = LiveClient({"local-main": ENDPOINT}, transport=one_reply_server(message))
+    t = Transcript(tmp_path / "transcript.jsonl")
+    result = chat(
+        client, "local-main", [{"role": "user", "content": "u"}], PlannerOutput, transcript=t
+    )
+    assert result.parsed is not None
+    record = json.loads((tmp_path / "transcript.jsonl").read_text().splitlines()[0])
+    assert record["reasoning"] == "worked it out"
+
+
+def test_a_reply_cut_off_at_the_token_limit_says_so():
+    LiveClient._structured.clear()
+    message = {"content": '{"action": "submit_design", "design": {"title": "half'}
+    client = LiveClient({"local-main": ENDPOINT}, transport=one_reply_server(message, "length"))
+    result = chat(
+        client, "local-main", [{"role": "user", "content": "u"}], PlannerOutput, max_tokens=50
+    )
+    assert result.parsed is None
+    assert result.error.startswith("SCHEMA_INVALID")
+    assert "hit the 50 token limit" in result.error

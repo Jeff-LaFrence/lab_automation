@@ -27,6 +27,8 @@ from pydantic import BaseModel, ValidationError
 from labauto.config import Endpoint
 
 TIMEOUT_SECONDS = 600
+# Reasoning models spend part of this on thinking before the JSON; 4096 left too little room.
+DEFAULT_MAX_TOKENS = 12000
 
 
 class RawReply(BaseModel):
@@ -224,7 +226,7 @@ def chat(
     messages: list[dict],
     schema: type[BaseModel] | None = None,
     temperature: float = 0.3,
-    max_tokens: int = 4096,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
     *,
     transcript: Transcript | None = None,
     role: str = "planner",
@@ -264,6 +266,8 @@ def chat(
             parsed, error = ({"text": body}, None) if body else (None, "the reply was empty")
         else:
             parsed, error = parse_reply(raw.text, schema)
+        if parsed is None and raw.stop_reason == "length":
+            error = f"the reply hit the {max_tokens} token limit before it finished ({error})"
         if recorded is None and transcript is not None:
             transcript.append(
                 {
@@ -483,7 +487,8 @@ class LiveClient:
         usage = data.get("usage") or {}
         return RawReply(
             text=msg.get("content") or "",
-            reasoning=msg.get("reasoning_content") or "",
+            # llama.cpp calls it reasoning_content, Ollama calls it reasoning.
+            reasoning=msg.get("reasoning_content") or msg.get("reasoning") or "",
             prompt_tokens=int(usage.get("prompt_tokens") or 0),
             completion_tokens=int(usage.get("completion_tokens") or 0),
             model=data.get("model") or ep.model,

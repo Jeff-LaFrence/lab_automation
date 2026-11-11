@@ -133,6 +133,9 @@ library, or where a fallback was taken. Open problems are at the end.
 - The first live run used Ollama's OpenAI-compatible endpoint with a 32B local model. Both planner attempts came back with no "grid" and no "conditions", so every design was EMPTY_DESIGN. Ollama turns the reply schema into a grammar, and a property that is not required may be left out, so the model left out the two keys that hold the experiment. The reply schema sent to a server now lists every property as required (`wire_schema` in `agents/llm.py`); keys that may be null stay nullable. Replies are still validated against the pydantic models, so no rule changed. With this change the same prompt gave the requested grid on both of two tries.
 - `.env.example` stays as SPEC gives it. How to point it at Ollama is in `docs/tooling_notes.md`.
 
+- Ollama returns a reasoning model's thinking in a field named `reasoning`; llama.cpp names it `reasoning_content`. The live client keeps either, so transcripts hold the thinking from both servers.
+- The default reply budget is 12000 tokens, up from 4096. A reasoning model (qwen3.8:27b) used 2907 of 4096 tokens on one repair call, most of it thinking, which left too little room for the JSON. A reply cut off at the limit now says so in its error instead of showing only a JSON parse error.
+
 ## Open problems
 
 - No evaluation has run on a model. The planner has run on a local model only in single checks while the schema fix above was made. Every model path (planner, hosted rung, model decider, report note) is built and tested with scripted clients only. Live results are pending: the planner evaluation (`docs/planner_eval.md`), recorded model sessions in `examples/recordings/`, the model decider row of the benchmark, and a model note in any campaign report. Each needs `labauto eval-planner`, `labauto plan`, `labauto benchmark`, or `labauto loop --strategy model` run against a configured endpoint.
