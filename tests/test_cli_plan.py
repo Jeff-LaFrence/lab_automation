@@ -95,7 +95,7 @@ def test_demo_shows_three_planner_scenarios(tmp_path, capsys):
     assert main(["demo", "--runs", str(tmp_path)]) == 0
     out = capsys.readouterr().out
     rows = [" ".join(line.split()) for line in out.splitlines()]
-    assert "01_simple_factorial AWAITING_APPROVAL 1 40 wells, no deviations" in rows
+    assert "01_simple_factorial AWAITING_APPROVAL 1 40 wells, no deviations (scripted)" in rows
     assert any(
         r.startswith("02_too_big AWAITING_APPROVAL 2 84 wells, repaired TOO_MANY_WELLS")
         for r in rows

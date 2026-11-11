@@ -3,12 +3,21 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from labauto.agents.llm import HostedClient, LiveClient, ReplayClient, ScriptedClient
 from labauto.approval import ApprovalError, approve, reject, status_text, verify
-from labauto.config import DEFAULT_ASSAY, DEFAULT_WORKCELL, Settings, load_settings, resolve
-from labauto.orchestrator import Clients, load_state, resume, run_summary_dict, start_run
+from labauto.config import (
+    DEFAULT_ASSAY,
+    DEFAULT_WORKCELL,
+    Endpoint,
+    Settings,
+    load_settings,
+    resolve,
+)
+from labauto.orchestrator import RESTING, Clients, load_state, resume, run_summary_dict, start_run
+from labauto.record import portable
 
 EXIT_OK, EXIT_HUMAN, EXIT_INTERNAL = 0, 1, 2
 DEMO_SCENARIOS = ["01_simple_factorial", "02_too_big", "03_out_of_range"]
@@ -39,12 +48,37 @@ def make_clients(spec: str, settings: Settings) -> Clients:
         client = ScriptedClient.from_file(resolve(path))
     else:
         raise ConfigError(f"--client must be live, replay:<file>, or scripted:<file>, not '{spec}'")
-    return Clients(local=client, hosted=client, spec=spec)
+    return Clients(local=client, hosted=client, spec=f"{kind}:{portable(resolve(path))}")
 
 
 def settings_for(spec: str) -> Settings:
-    """Live runs read .env. Replayed and scripted runs use no endpoints, so they are repeatable."""
-    return load_settings() if spec == "live" else Settings()
+    """Live runs read .env. Replayed and scripted runs use no real endpoints, so they repeat exactly.
+
+    If a recording (or a scripted file keyed by label) holds hosted replies, the
+    hosted rung is switched on with a placeholder endpoint, so the replay walks
+    the same ladder the session did.
+    """
+    if spec == "live":
+        return load_settings()
+    kind, _, path = spec.partition(":")
+    hosted_calls = 0
+    try:
+        if kind == "replay":
+            for line in resolve(path).read_text(encoding="utf-8").splitlines():
+                if line.strip() and json.loads(line).get("rung") == "hosted":
+                    hosted_calls += 1
+        elif kind == "scripted":
+            data = json.loads(resolve(path).read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                hosted_calls = len(data.get("hosted", []))
+    except (OSError, ValueError):
+        return Settings()
+    if not hosted_calls:
+        return Settings()
+    return Settings(
+        hosted=Endpoint(label="hosted", provider=kind, model=kind),
+        hosted_max_calls=max(2, hosted_calls),
+    )
 
 
 def _exit_for(state: str) -> int:
@@ -76,8 +110,10 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 def cmd_status(args: argparse.Namespace) -> int:
     run_dir = Path(args.run)
-    if load_state(run_dir).state == "APPROVED" and not verify(run_dir):
-        print("The approval was voided: the files changed after approval.")
+    if load_state(run_dir).state == "APPROVED":
+        verify(run_dir)
+        if load_state(run_dir).state != "APPROVED":
+            print("The approval was voided: the files changed after approval.")
     print(status_text(run_dir))
     return EXIT_OK
 
@@ -105,7 +141,12 @@ def cmd_reject(args: argparse.Namespace) -> int:
 
 def cmd_resume(args: argparse.Namespace) -> int:
     run_dir = Path(args.run)
-    spec = args.client or load_state(run_dir).client or "live"
+    st = load_state(run_dir)
+    if st.state in RESTING:
+        resume(run_dir, Clients(local=None), Settings())  # rewrites summary.md if a crash lost it
+        print(status_text(run_dir))
+        return _exit_for(st.state)
+    spec = args.client or st.client or "live"
     try:
         settings = settings_for(spec)
         clients = make_clients(spec, settings)
@@ -118,7 +159,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
 
 
 def cmd_eval(args: argparse.Namespace) -> int:
-    from labauto.planner_eval import evaluate
+    from labauto.planner_eval import NoModelAnswered, evaluate
 
     settings = load_settings()
     try:
@@ -129,13 +170,18 @@ def cmd_eval(args: argparse.Namespace) -> int:
             "docs/planner_eval.md was not written. The README status table says live results are pending."
         )
         return EXIT_HUMAN
-    path = evaluate(
-        lambda: make_clients("live", settings),
-        settings,
-        trials=args.trials,
-        runs_dir=args.runs,
-        out_path=Path(args.out),
-    )
+    try:
+        path = evaluate(
+            lambda: make_clients("live", settings),
+            settings,
+            trials=args.trials,
+            runs_dir=args.runs,
+            out_path=Path(args.out),
+        )
+    except NoModelAnswered as exc:
+        print(f"error: {exc}")
+        print(f"{args.out} was not written.")
+        return EXIT_HUMAN
     print(f"Wrote {path}")
     return EXIT_OK
 
@@ -143,15 +189,26 @@ def cmd_eval(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------- demo
 
 
+SCRIPTED_LABEL = "scripted session (hand-written replies, not a model)"
+
+
+def recording_source(path: Path) -> str:
+    """Say what a recording holds, from its records, never from its file name."""
+    models = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            models.add(json.loads(line).get("model") or "unknown")
+    if not models or "scripted" in models or "unknown" in models:
+        return SCRIPTED_LABEL
+    return "recorded session of " + ", ".join(sorted(models))
+
+
 def recording_for(scenario: str) -> tuple[Path | None, str]:
-    """A live recording if one exists, else the scripted session's recording."""
+    """A recording of a model session if one exists, else the scripted session's recording."""
     folder = resolve("examples/recordings")
-    live = folder / f"{scenario}.jsonl"
-    if live.exists():
-        return live, "recorded model session"
-    scripted = folder / f"{scenario}.scripted.jsonl"
-    if scripted.exists():
-        return scripted, "scripted session (hand-written replies, not a model)"
+    for path in (folder / f"{scenario}.jsonl", folder / f"{scenario}.scripted.jsonl"):
+        if path.exists():
+            return path, recording_source(path)
     return None, "no recording"
 
 
@@ -176,7 +233,7 @@ def demo_planner(runs: str, live: bool = False) -> bool:
     print()
     print(planner_row("scenario", "state", "attempts", "detail"))
     all_ok = True
-    sources = set()
+    sources = {}
     for scenario in DEMO_SCENARIOS:
         request = resolve(f"examples/requests/{scenario}.txt").read_text(encoding="utf-8")
         if live:
@@ -186,10 +243,10 @@ def demo_planner(runs: str, live: bool = False) -> bool:
             if path is None:
                 print(planner_row(scenario, "SKIPPED", "", "(no recording)"))
                 continue
-            sources.add(source)
-            clients = Clients(
-                local=ReplayClient(path), hosted=ReplayClient(path), spec=f"replay:{path.name}"
-            )
+            sources[scenario] = source
+            spec = f"replay:{portable(path)}"
+            clients = make_clients(spec, Settings())
+            settings = settings_for(spec)
         run_dir = start_run(request, DEFAULT_ASSAY, DEFAULT_WORKCELL, clients, settings, runs)
         d = run_summary_dict(run_dir)
         repaired = [c for codes in d["codes"][:-1] for c in codes]
@@ -199,13 +256,18 @@ def demo_planner(runs: str, live: bool = False) -> bool:
                 detail += f", repaired {', '.join(dict.fromkeys(repaired))}"
             n = d["deviations"]
             detail += f", {n} deviation{'s' if n != 1 else ''} declared" if n else ", no deviations"
+        elif d["state"] == "NEEDS_HUMAN" and live:
+            detail = d["needs_human"] or "see summary.md"
         else:
             detail = d["needs_human"] or "see summary.md"
-            all_ok = all_ok and live
+            all_ok = False
+        if scenario in sources and sources[scenario] == SCRIPTED_LABEL:
+            detail += " (scripted)"
         print(planner_row(scenario, d["state"], str(d["attempts"]), detail))
     if sources:
         print()
-        print("Source: " + "; ".join(sorted(sources)) + ".")
+        for scenario, source in sources.items():
+            print(f"Source of {scenario}: {source}.")
     print("A person approves with labauto approve <run>. Nothing here was approved.")
     return all_ok
 

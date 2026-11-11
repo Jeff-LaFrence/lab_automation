@@ -65,11 +65,13 @@ good_factorial (tecan_evo)   PASS                same plan, second instrument
 Stage 2: planner scenarios, replayed from recorded sessions
 
 scenario                     state               attempts  detail
-01_simple_factorial          AWAITING_APPROVAL   1         40 wells, no deviations
-02_too_big                   AWAITING_APPROVAL   2         84 wells, repaired TOO_MANY_WELLS, 1 deviation declared
-03_out_of_range              AWAITING_APPROVAL   3         20 wells, repaired FACTOR_OUT_OF_RANGE, DUPLICATE_CONDITION, 2 deviations declared
+01_simple_factorial          AWAITING_APPROVAL   1         40 wells, no deviations (scripted)
+02_too_big                   AWAITING_APPROVAL   2         84 wells, repaired TOO_MANY_WELLS, 1 deviation declared (scripted)
+03_out_of_range              AWAITING_APPROVAL   3         20 wells, repaired FACTOR_OUT_OF_RANGE, DUPLICATE_CONDITION, 2 deviations declared (scripted)
 
-Source: scripted session (hand-written replies, not a model).
+Source of 01_simple_factorial: scripted session (hand-written replies, not a model).
+Source of 02_too_big: scripted session (hand-written replies, not a model).
+Source of 03_out_of_range: scripted session (hand-written replies, not a model).
 A person approves with labauto approve <run>. Nothing here was approved.
 ```
 
@@ -121,7 +123,7 @@ That object goes back to the planner as part of its next prompt, with the earlie
 It passes every layer: design rules, plan rules, workcell rules, the Opentrons simulator, and the ledger check. The run then waits for a person. The top of its `summary.md`:
 
 ```
-# Run 20261111T051302Z_48bf: AWAITING_APPROVAL
+# Run 20261111T060027Z_284c: AWAITING_APPROVAL
 
 ## Request
 
@@ -142,7 +144,7 @@ From the planner's deviations list.
 - attempt 1  local-main (scripted)  failed  TOO_MANY_WELLS
 - attempt 2  local-main (scripted)  passed
 
-To approve: `labauto approve runs/<run>`    To reject: `labauto reject runs/<run> --reason "..."`
+To approve: `labauto approve runs/readme02/20261111T060027Z_284c`    To reject: `labauto reject runs/readme02/20261111T060027Z_284c --reason "..."`
 ```
 
 Below that, the summary lists what would be run, reagent use, tips, and each check. `approval.json` records who approved, when, and the design and protocol hashes. If either file changes after approval, the approval is void.
@@ -199,7 +201,7 @@ The four slots:
 
 | Slot | Interface | Built |
 |---|---|---|
-| Planner | `propose(client, label, messages) -> ChatResult` holding a `PlannerOutput` | live (OpenAI-compatible), hosted, scripted, and replay clients |
+| Planner | `propose(client, label, messages, first=True) -> ChatResult` holding a `PlannerOutput` | live (OpenAI-compatible), hosted, scripted, and replay clients |
 | Instrument | `compile(worklist, workcell, plan, out_dir) -> Path`, `simulate(artifact, workcell) -> SimResult` | Opentrons OT-2, Tecan EVO (simulated) |
 | Decider | `decide(history, n, brief, seed) -> Decision` | not yet |
 | Store | `append_results`, `load_results`, `save_record` | not yet |
@@ -246,7 +248,7 @@ Nothing upstream changes: the design, plan, and worklist are vendor neutral.
 
 ## How this was built
 
-Designed and directed by the repository owner. The code was written with an AI coding assistant from a written specification, [SPEC.md](SPEC.md) in this repository. The planner and decider are written to run on a local open-weight model, but no model server was available when this was built, so live results are pending. Everything is tested in simulation only.
+Designed and directed by the repository owner. The code was written with an AI coding assistant from a written specification, [SPEC.md](SPEC.md) in this repository. The planner is written to run on a local open-weight model, but no model server was available when this was built, so live results are pending. Everything is tested in simulation only.
 
 ## Docs
 

@@ -48,6 +48,39 @@ def new_run_dir(base: str | Path = "runs", prefix: str = "") -> Path:
             return path
 
 
+def display_path(path: str | Path) -> str:
+    """A path for records people read: relative to the working folder, or the folder name alone.
+
+    Never a home folder path.
+    """
+    p = Path(path).resolve()
+    try:
+        return str(p.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return f"<run folder {p.name}>" if p.is_dir() else p.name
+
+
+def portable(path: str | Path) -> str:
+    """A path to store for resuming: relative to the working folder or the repository when possible."""
+    from labauto.config import repo_root
+
+    p = Path(path)
+    if not p.is_absolute():
+        return str(p)
+    for base in (Path.cwd().resolve(), repo_root().resolve()):
+        try:
+            return str(p.resolve().relative_to(base))
+        except ValueError:
+            continue
+    return str(p)
+
+
+def check_record(result: CheckResult) -> CheckResult:
+    """The check result as stored in check.json: the artifact named by file name only."""
+    name = Path(result.artifact_path).name if result.artifact_path else None
+    return result.model_copy(update={"artifact_path": name})
+
+
 def write_json(path: Path, data: object) -> None:
     """Write JSON with two space indents. Pydantic models are dumped first."""
     if hasattr(data, "model_dump"):

@@ -19,6 +19,7 @@ An error that needs a person skips the rest of the ladder.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import traceback
 from dataclasses import dataclass
@@ -41,7 +42,14 @@ from labauto.models import (
     Transition,
 )
 from labauto.pipeline import check
-from labauto.record import new_run_dir, utc_now, write_check_files, write_json
+from labauto.record import (
+    check_record,
+    new_run_dir,
+    portable,
+    utc_now,
+    write_check_files,
+    write_json,
+)
 
 RESTING = {"AWAITING_APPROVAL", "APPROVED", "REJECTED", "NEEDS_HUMAN"}
 LOCAL_ATTEMPTS = 3
@@ -74,10 +82,11 @@ def load_state(run_dir: Path) -> RunState:
 
 
 def save_state(run_dir: Path, st: RunState) -> None:
+    """Write state.json in one step (a temporary file, then a rename), so a crash never leaves half a file."""
     st.updated_at = utc_now()
-    (run_dir / "state.json").write_text(
-        st.model_dump_json(indent=2, by_alias=True) + "\n", encoding="utf-8"
-    )
+    tmp = run_dir / "state.json.tmp"
+    tmp.write_text(st.model_dump_json(indent=2, by_alias=True) + "\n", encoding="utf-8")
+    os.replace(tmp, run_dir / "state.json")
 
 
 def transition(run_dir: Path, st: RunState, to: str, reason: str) -> None:
@@ -143,9 +152,26 @@ def next_step(attempts: list[AttemptRecord], settings: Settings, hosted_calls: i
         return Step(
             "handoff", reason=f"{why_local}; hosted rung not configured; handing to a person"
         )
+    if not hosted and settings.hosted_max_calls <= 0:
+        return Step(
+            "handoff",
+            reason=f"{why_local}; hosted rung skipped: its call cap is {settings.hosted_max_calls}; handing to a person",
+        )
     if len(hosted) < HOSTED_ATTEMPTS and hosted_calls < settings.hosted_max_calls:
         return Step("attempt", rung="hosted", reason=f"{why_local}; escalating to the hosted rung")
     return Step("handoff", reason=f"{why_local}; hosted rung used; handing to a person")
+
+
+def hosted_calls_before(transcript: Transcript, number: int) -> int:
+    """Hosted calls recorded for attempts before this one. Read from the transcript, so a
+    resume never counts a recorded call twice."""
+    return sum(
+        1
+        for r in transcript.records
+        if r.get("scope") == "planner"
+        and r.get("rung") == "hosted"
+        and (r.get("attempt") or 0) < number
+    )
 
 
 # ---------------------------------------------------------------- running
@@ -167,8 +193,8 @@ def start_run(
         run_id=run_dir.name,
         state="RECEIVED",
         updated_at=utc_now(),
-        assay=str(assay_path),
-        workcell=str(workcell_path),
+        assay=portable(assay_path),
+        workcell=portable(workcell_path),
         seed=seed,
         client=clients.spec,
     )
@@ -185,6 +211,7 @@ def resume(run_dir: Path, clients: Clients, settings: Settings) -> RunState:
         back = st.history[-1].from_ if st.history else "RECEIVED"
         transition(run_dir, st, back or "RECEIVED", "resumed after a failure")
     if st.state in RESTING:
+        _write_summary(run_dir, st)  # in case a crash came between the state change and the summary
         return st
     # Scripted and replay clients serve replies in order. Move them past the
     # replies the transcript already holds, so the next call gets the next reply.
@@ -227,15 +254,18 @@ def _drive(run_dir: Path, st: RunState, clients: Clients, settings: Settings) ->
     attempts = load_attempts(run_dir)
 
     while True:
-        step = next_step(attempts, settings, st.hosted_calls)
+        used = hosted_calls_before(transcript, len(attempts) + 1)
+        step = next_step(attempts, settings, used)
         if step.kind == "pass":
             _finish(run_dir, st, attempts[-1], step.reason)
             return
-        if (
-            "hosted rung not configured" in step.reason
-            and "hosted rung not configured" not in st.notes
-        ):
-            st.notes.append("hosted rung not configured")
+        for note in ("hosted rung not configured", "hosted rung skipped: its call cap is"):
+            if note in step.reason:
+                text = (
+                    note if note.endswith("configured") else f"{note} {settings.hosted_max_calls}"
+                )
+                if text not in st.notes:
+                    st.notes.append(text)
         if step.kind == "handoff":
             st.needs_human = NeedsHuman(kind="handoff", text=step.reason)
             transition(run_dir, st, "NEEDS_HUMAN", step.reason)
@@ -254,7 +284,7 @@ def _drive(run_dir: Path, st: RunState, clients: Clients, settings: Settings) ->
         if rung == "hosted":
             decision = hosted_route(est, settings, calls_log, log_extra)
             client = clients.hosted or clients.local
-            max_calls = max(1, min(2, settings.hosted_max_calls - st.hosted_calls))
+            max_calls = max(1, min(2, settings.hosted_max_calls - used))
         else:
             decision = route(
                 "planner" if number == 1 else "repair", est, settings, calls_log, log_extra
@@ -273,7 +303,7 @@ def _drive(run_dir: Path, st: RunState, clients: Clients, settings: Settings) ->
             max_calls=max_calls,
         )
         if rung == "hosted":
-            st.hosted_calls += result.calls
+            st.hosted_calls = used + result.calls
         transition(
             run_dir, st, "CHECKING", f"attempt {number}: reply received from {decision.label}"
         )
@@ -321,7 +351,7 @@ def _check_attempt(run_dir, number, rung, result, assay, workcell, seed) -> Atte
     if design is not None:
         res = check(design, assay, workcell, out_dir=folder)
         write_check_files(folder, res, assay)
-        write_json(folder / "check.json", res)
+        write_json(folder / "check.json", check_record(res))
         record.design = res.design.model_dump(mode="json") if res.design else None
         record.errors = res.errors
         record.ok = res.ok

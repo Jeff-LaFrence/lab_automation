@@ -36,6 +36,12 @@ class RawReply(BaseModel):
     prompt_tokens: int = 0
     completion_tokens: int = 0
     model: str = ""
+    # What was actually sent, when the client changed it (schema text added,
+    # temperature dropped). None means the messages and temperature as given.
+    sent_messages: list[dict] | None = None
+    sent_temperature: float | None = None
+    temperature_sent: bool = True
+    stop_reason: str | None = None
 
 
 class ChatResult(BaseModel):
@@ -49,6 +55,7 @@ class ChatResult(BaseModel):
     endpoint_label: str = ""
     model: str = ""
     calls: int = 0
+    fresh_calls: int = 0  # calls actually sent to the client, not served from the transcript
     error: str | None = None
 
 
@@ -76,48 +83,87 @@ class ChatClient(Protocol):
 # ---------------------------------------------------------------- parsing
 
 _THINK = re.compile(r"<think>.*?</think>", re.S | re.I)
+_OPEN_THINK = re.compile(r"<think>", re.I)
+_CLOSE_THINK = re.compile(r"</think>", re.I)
 _FENCE = re.compile(r"```(?:json|JSON)?\s*\n?(.*?)```", re.S)
 
 
-def extract_json(text: str) -> dict:
-    """Pull the first complete JSON object out of a model reply.
+def strip_thinking(text: str) -> str:
+    """Remove reasoning: closed <think> blocks, text before a lone </think>, and an unclosed <think> to the end.
 
-    Strips a <think>...</think> block, then code fences, then takes the first
-    '{' that starts a complete JSON object. Raises ValueError if there is none.
+    An unclosed block means the model never finished thinking, so nothing in
+    it may be taken as the answer.
     """
     cleaned = _THINK.sub("", text)
-    if "</think>" in cleaned:  # an opening tag the server already removed
-        cleaned = cleaned.split("</think>", 1)[1]
-    fenced = _FENCE.findall(cleaned)
-    candidates = [*fenced, cleaned] if fenced else [cleaned]
+    close = _CLOSE_THINK.search(cleaned)
+    if close:  # an opening tag the server already removed
+        cleaned = cleaned[close.end() :]
+    opening = _OPEN_THINK.search(cleaned)
+    if opening:
+        cleaned = cleaned[: opening.start()]
+    return cleaned
+
+
+def json_objects(text: str) -> list[dict]:
+    """Every top level JSON object in a reply, in order, from fences first, then the whole text.
+
+    An object nested inside one already found is not listed on its own.
+    """
+    cleaned = strip_thinking(text)
+    chunks = [*_FENCE.findall(cleaned), cleaned]
     decoder = json.JSONDecoder()
-    for chunk in candidates:
+    found: list[dict] = []
+    seen: set[str] = set()
+    for chunk in chunks:
+        covered = 0
         for match in re.finditer(r"\{", chunk):
+            if match.start() < covered:
+                continue
             try:
-                obj, _ = decoder.raw_decode(chunk[match.start() :])
+                obj, length = decoder.raw_decode(chunk[match.start() :])
             except json.JSONDecodeError:
                 continue
             if isinstance(obj, dict):
-                return obj
-    raise ValueError("the reply holds no complete JSON object")
+                covered = match.start() + length
+                tag = json.dumps(obj, sort_keys=True)
+                if tag not in seen:
+                    seen.add(tag)
+                    found.append(obj)
+    return found
+
+
+def extract_json(text: str) -> dict:
+    """The first complete top level JSON object in a model reply. Raises ValueError if there is none."""
+    objects = json_objects(text)
+    if not objects:
+        raise ValueError("the reply holds no complete JSON object")
+    return objects[0]
+
+
+def _problems(exc: ValidationError) -> str:
+    return "; ".join(
+        f"{'.'.join(str(p) for p in e['loc']) or '(top level)'}: {e['msg']}" for e in exc.errors()
+    )
 
 
 def parse_reply(text: str, schema: type[BaseModel] | None) -> tuple[dict | None, str | None]:
-    """Extract and validate. Returns (parsed, None) or (None, error text)."""
-    try:
-        obj = extract_json(text)
-    except ValueError as exc:
-        return None, str(exc)
+    """Extract and validate. Returns (parsed, None) or (None, error text).
+
+    With a schema, the first object that validates wins. If none does, the
+    error describes the first object found.
+    """
+    objects = json_objects(text)
+    if not objects:
+        return None, "the reply holds no complete JSON object"
     if schema is None:
-        return obj, None
-    try:
-        return schema.model_validate(obj).model_dump(mode="json"), None
-    except ValidationError as exc:
-        problems = "; ".join(
-            f"{'.'.join(str(p) for p in e['loc']) or '(top level)'}: {e['msg']}"
-            for e in exc.errors()
-        )
-        return None, f"the JSON does not match the reply format: {problems}"
+        return objects[0], None
+    first_error = None
+    for obj in objects:
+        try:
+            return schema.model_validate(obj).model_dump(mode="json"), None
+        except ValidationError as exc:
+            first_error = first_error or exc
+    return None, f"the JSON does not match the reply format: {_problems(first_error)}"
 
 
 # ---------------------------------------------------------------- transcript
@@ -136,10 +182,14 @@ class Transcript:
         self._cache: dict[tuple, dict] = {}
         if path is not None and path.exists():
             for line in path.read_text(encoding="utf-8").splitlines():
-                if line.strip():
+                if not line.strip():
+                    continue
+                try:
                     rec = json.loads(line)
-                    self.records.append(rec)
-                    self._cache[self._key(rec)] = rec
+                except json.JSONDecodeError:
+                    continue  # a line cut off by a crash: that call is simply made again
+                self.records.append(rec)
+                self._cache[self._key(rec)] = rec
 
     @staticmethod
     def _key(rec: dict) -> tuple:
@@ -204,6 +254,7 @@ def chat(
             start = time.perf_counter()
             raw = client.complete(label, convo, json_schema, temperature, max_tokens)
             seconds = round(time.perf_counter() - start, 3)
+            total.fresh_calls += 1
         parsed, error = parse_reply(raw.text, schema)
         if recorded is None and transcript is not None:
             transcript.append(
@@ -213,9 +264,14 @@ def chat(
                     "role": role,
                     "endpoint_label": label,
                     "model": raw.model,
-                    "temperature": temperature,
-                    "messages": convo,
+                    "temperature": (
+                        (raw.sent_temperature if raw.sent_temperature is not None else temperature)
+                        if raw.temperature_sent
+                        else None
+                    ),
+                    "messages": raw.sent_messages if raw.sent_messages is not None else convo,
                     "raw": raw.text,
+                    "stop_reason": raw.stop_reason,
                     "reasoning": raw.reasoning,
                     "parsed": parsed,
                     "parse_error": error,
@@ -344,9 +400,17 @@ class LiveClient:
                         json=body,
                         headers=self._headers(ep),
                     )
-                self._structured[key] = resp.status_code == 200
-            except Exception:
+            except Exception as exc:
+                # No answer is not a "no". Nothing is cached, and the caller sees the outage.
+                raise EndpointUnavailable(f"{label} did not answer ({type(exc).__name__})") from exc
+            if resp.status_code == 200:
+                self._structured[key] = True
+            elif 400 <= resp.status_code < 500:
                 self._structured[key] = False
+            else:
+                raise EndpointUnavailable(
+                    f"{label} answered the probe with HTTP {resp.status_code}"
+                )
         return self._structured[key]
 
     def complete(self, label, messages, schema, temperature, max_tokens) -> RawReply:
@@ -357,6 +421,7 @@ class LiveClient:
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
+        sent_messages = None
         if schema is not None:
             if self.supports_structured(label):
                 body["response_format"] = {
@@ -364,7 +429,7 @@ class LiveClient:
                     "json_schema": {"name": "reply", "schema": schema},
                 }
             else:
-                body["messages"] = with_schema_in_system(messages, schema)
+                body["messages"] = sent_messages = with_schema_in_system(messages, schema)
         try:
             with self._http() as http:
                 resp = http.post(
@@ -385,16 +450,20 @@ class LiveClient:
             prompt_tokens=int(usage.get("prompt_tokens") or 0),
             completion_tokens=int(usage.get("completion_tokens") or 0),
             model=data.get("model") or ep.model,
+            sent_messages=sent_messages,
+            stop_reason=(data.get("choices") or [{}])[0].get("finish_reason"),
         )
 
 
 class HostedClient:
-    """The hosted rung. Uses the provider's official SDK; the model name comes from the environment.
+    """The hosted rung. The model name comes from the environment.
 
-    Provider "anthropic" uses the anthropic package (install the [hosted] extra).
-    Provider "openai_compatible" uses LiveClient against the hosted endpoint.
-    Current hosted models reject a temperature setting, so none is sent, and
-    the schema travels in the prompt.
+    Provider "anthropic" uses the provider's official SDK (install the [hosted]
+    extra). Its current models reject a temperature setting, so none is sent,
+    and the reply schema travels in the system prompt.
+    Provider "openai_compatible" behaves exactly like LiveClient against the
+    hosted endpoint: temperature is sent, and response_format is used when the
+    server accepts it.
     """
 
     def __init__(self, endpoint: Endpoint):
@@ -428,15 +497,17 @@ class HostedClient:
             raise EndpointUnavailable(f"hosted answered with HTTP {exc.status_code}") from exc
         except anthropic.APIConnectionError as exc:
             raise EndpointUnavailable("hosted did not answer") from exc
-        if resp.stop_reason == "refusal":
-            text = "(the hosted model declined to answer)"
-        else:
-            text = "".join(b.text for b in resp.content if b.type == "text")
+        # The text is exactly what the model returned (empty on a refusal).
+        # A refusal is marked by code in stop_reason, never written as model text.
+        text = "".join(b.text for b in resp.content if b.type == "text")
         return RawReply(
             text=text,
             prompt_tokens=resp.usage.input_tokens,
             completion_tokens=resp.usage.output_tokens,
             model=resp.model,
+            sent_messages=[{"role": "system", "content": system}, *turns],
+            temperature_sent=False,
+            stop_reason=resp.stop_reason,
         )
 
 

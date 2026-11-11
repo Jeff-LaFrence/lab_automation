@@ -69,14 +69,16 @@ def workcell_summary(workcell: Workcell, assay: Assay) -> str:
     lines.append(f"Usable volume per reagent ({dead * 100:g}% of each source is held back):")
     for reagent, inv in workcell.inventory.items():
         lines.append(f"- {reagent}: {fmt_ul(inv.volume_ul * (1 - dead))} uL")
-    lines.append("Tips:")
-    for pip in workcell.pipettes:
-        entry = workcell.deck_entry(pip.tips)
+    lines.append("Tips, per rack:")
+    for rack in dict.fromkeys(p.tips for p in workcell.pipettes):
+        entry = workcell.deck_entry(rack)
         spec = labware.get(entry.labware) if entry else None
         count = spec.count if spec else 0
-        lines.append(
-            f"- {pip.name} pipette ({fmt_ul(pip.min_ul)} to {fmt_ul(pip.max_ul)} uL): {count} tips"
+        users = [p for p in workcell.pipettes if p.tips == rack]
+        who = " and ".join(
+            f"the {p.name} pipette ({fmt_ul(p.min_ul)} to {fmt_ul(p.max_ul)} uL)" for p in users
         )
+        lines.append(f"- {rack}: {count} tips, used by {who}")
     threshold = fmt_ul(workcell.liquid_handling.contact_dispense_below_ul)
     lines.append(
         f"Small transfer rule: every addition below {threshold} uL uses a fresh tip, "
@@ -163,7 +165,7 @@ def propose(
     label: str,
     messages: list[dict],
     *,
-    first: bool,
+    first: bool = True,
     transcript=None,
     meta: dict | None = None,
     max_calls: int = 2,

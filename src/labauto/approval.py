@@ -15,8 +15,8 @@ from pathlib import Path
 
 from labauto.config import load_assay, load_workcell
 from labauto.models import Approval, Design, RunState
-from labauto.pipeline import design_hash, file_hash
-from labauto.record import render_summary, utc_now, write_json
+from labauto.pipeline import design_hash, file_hash, sha256_text
+from labauto.record import display_path, render_summary, utc_now, write_json
 
 MODES = ("human", "envelope", "demo_auto")
 UNNAMED = "unnamed person"
@@ -39,9 +39,18 @@ def current_hashes(run_dir: Path) -> tuple[str | None, str | None]:
     final = run_dir / "final"
     design_path = final / "design.json"
     if not design_path.exists():
-        return None, None
-    d_hash = design_hash(Design.model_validate_json(design_path.read_text(encoding="utf-8")))
-    res = load_check(final)
+        d_hash = None
+    else:
+        raw = design_path.read_text(encoding="utf-8")
+        try:
+            d_hash = design_hash(Design.model_validate_json(raw))
+        except ValueError:
+            # A design file that no longer reads is a change: its hash cannot match.
+            d_hash = "unreadable:" + sha256_text(raw)
+    try:
+        res = load_check(final)
+    except ValueError:
+        res = None
     artifact = (
         final / Path(res.artifact_path).name if res and res.artifact_path else final / "protocol.py"
     )
@@ -204,9 +213,10 @@ def write_run_summary(run_dir: Path, st: RunState) -> Path:
     out += ["## How we got here", ""] + _attempt_lines(run_dir, st) + [""]
 
     if st.state == "AWAITING_APPROVAL":
+        where = display_path(run_dir)
         out += [
-            f"To approve: `labauto approve {run_dir}`    "
-            f'To reject: `labauto reject {run_dir} --reason "..."`',
+            f"To approve: `labauto approve {where}`    "
+            f'To reject: `labauto reject {where} --reason "..."`',
             "",
         ]
     if st.state == "NEEDS_HUMAN" and st.needs_human:
@@ -244,10 +254,15 @@ def write_run_summary(run_dir: Path, st: RunState) -> Path:
     if shown is not None:
         assay = load_assay(st.assay)
         workcell = load_workcell(st.workcell)
-        where = "final" if final is not None else "last attempt"
-        files = sorted(
-            p.name for p in (run_dir / ("final" if final else "attempts")).glob("*") if p.is_file()
+        from labauto.orchestrator import attempt_dir
+
+        folder = (
+            run_dir / "final"
+            if final is not None
+            else attempt_dir(run_dir, attempts[-1].number, attempts[-1].rung)
         )
+        where = folder.relative_to(run_dir).as_posix()
+        files = [f"{where}/{p.name}" for p in sorted(folder.glob("*")) if p.is_file()]
         body = render_summary(st.run_id, shown, assay, workcell, f"request.txt ({where})", files)
         out += body.split("\n", 2)[2].splitlines()
     path = run_dir / "summary.md"
