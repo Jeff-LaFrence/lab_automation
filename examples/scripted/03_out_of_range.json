@@ -1,0 +1,107 @@
+[
+ {
+  "action": "submit_design",
+  "design": {
+   "title": "Catalyst 5, 10, 15 mol % by base 1.5 and 3.5 equivalents at 10% co-solvent",
+   "grid": {
+    "catalyst_mol_pct": [
+     5,
+     10,
+     15
+    ],
+    "base_equiv": [
+     1.5,
+     3.5
+    ],
+    "cosolvent_pct": [
+     10
+    ]
+   },
+   "conditions": null,
+   "replicates": 4,
+   "include_controls": true,
+   "deviations": [],
+   "assumptions": [
+    "Controls on: negative and reference controls in A1 to D1 (assay default)."
+   ],
+   "notes": ""
+  }
+ },
+ {
+  "action": "submit_design",
+  "design": {
+   "title": "Catalyst and base clamped to the allowed range at 10% co-solvent",
+   "grid": {
+    "catalyst_mol_pct": [
+     5,
+     10,
+     10
+    ],
+    "base_equiv": [
+     1.5,
+     3.0
+    ],
+    "cosolvent_pct": [
+     10
+    ]
+   },
+   "conditions": null,
+   "replicates": 4,
+   "include_controls": true,
+   "deviations": [
+    {
+     "requested": "catalyst 15 mol %",
+     "planned": "catalyst 10 mol %",
+     "reason": "10 mol % is the highest allowed catalyst loading."
+    },
+    {
+     "requested": "base 3.5 equivalents",
+     "planned": "base 3.0 equivalents",
+     "reason": "3.0 equivalents is the highest allowed base level."
+    }
+   ],
+   "assumptions": [
+    "Controls on: negative and reference controls in A1 to D1 (assay default)."
+   ],
+   "notes": ""
+  }
+ },
+ {
+  "action": "submit_design",
+  "design": {
+   "title": "Catalyst 5 and 10 mol % by base 1.5 and 3.0 equivalents at 10% co-solvent",
+   "grid": {
+    "catalyst_mol_pct": [
+     5,
+     10
+    ],
+    "base_equiv": [
+     1.5,
+     3.0
+    ],
+    "cosolvent_pct": [
+     10
+    ]
+   },
+   "conditions": null,
+   "replicates": 4,
+   "include_controls": true,
+   "deviations": [
+    {
+     "requested": "catalyst 15 mol %",
+     "planned": "dropped",
+     "reason": "15 mol % is above the allowed maximum of 10 mol %, and 10 mol % is already in the design."
+    },
+    {
+     "requested": "base 3.5 equivalents",
+     "planned": "base 3.0 equivalents",
+     "reason": "3.0 equivalents is the highest allowed base level."
+    }
+   ],
+   "assumptions": [
+    "Controls on: negative and reference controls in A1 to D1 (assay default)."
+   ],
+   "notes": ""
+  }
+ }
+]

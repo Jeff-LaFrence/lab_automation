@@ -1,0 +1,33 @@
+[
+ {
+  "action": "submit_design",
+  "design": {
+   "title": "More base around the reference conditions",
+   "grid": {
+    "catalyst_mol_pct": [
+     2.0
+    ],
+    "base_equiv": [
+     1.5,
+     2.0,
+     2.5,
+     3.0
+    ],
+    "cosolvent_pct": [
+     20
+    ]
+   },
+   "conditions": null,
+   "replicates": 3,
+   "include_controls": true,
+   "deviations": [],
+   "assumptions": [
+    "'Our usual conditions' read as the reference control: catalyst 2.0 mol %, base 1.5 equivalents, 20% co-solvent.",
+    "'More base' read as base from 1.5 up to 3.0 equivalents in 0.5 steps.",
+    "3 replicates (assay default).",
+    "Controls on: negative and reference controls in A1 to D1 (assay default)."
+   ],
+   "notes": ""
+  }
+ }
+]

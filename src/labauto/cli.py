@@ -188,6 +188,10 @@ def cmd_demo(args: argparse.Namespace) -> int:
     row, matched = tecan_row(assay, args.runs, good)
     all_ok &= matched
     print(row)
+
+    from labauto.cli_plan import demo_planner
+
+    all_ok &= demo_planner(args.runs, live=getattr(args, "live", False))
     print()
     print(f"Run folders are in {args.runs}/. Finished in {time.perf_counter() - start:.1f} s.")
     return EXIT_PASS if all_ok else EXIT_CAUGHT
@@ -212,7 +216,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("demo", help="run the demo cases with no network")
     p.add_argument("--runs", default="runs", help="folder for run records")
+    p.add_argument("--live", action="store_true", help="run the planner scenarios on the configured endpoint")
     p.set_defaults(func=cmd_demo)
+
+    from labauto.cli_plan import add_parsers
+
+    add_parsers(sub)
     return parser
 
 

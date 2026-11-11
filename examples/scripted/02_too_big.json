@@ -1,0 +1,82 @@
+[
+ {
+  "action": "submit_design",
+  "design": {
+   "title": "Catalyst 1 to 10 mol % by four base levels at 20% co-solvent",
+   "grid": {
+    "catalyst_mol_pct": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10
+    ],
+    "base_equiv": [
+     1.0,
+     1.5,
+     2.0,
+     2.5
+    ],
+    "cosolvent_pct": [
+     20
+    ]
+   },
+   "conditions": null,
+   "replicates": 3,
+   "include_controls": true,
+   "deviations": [],
+   "assumptions": [
+    "Controls on: negative and reference controls in A1 to D1 (assay default)."
+   ],
+   "notes": ""
+  }
+ },
+ {
+  "action": "submit_design",
+  "design": {
+   "title": "Catalyst 1 to 10 mol % by four base levels at 20% co-solvent, in duplicate",
+   "grid": {
+    "catalyst_mol_pct": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10
+    ],
+    "base_equiv": [
+     1.0,
+     1.5,
+     2.0,
+     2.5
+    ],
+    "cosolvent_pct": [
+     20
+    ]
+   },
+   "conditions": null,
+   "replicates": 2,
+   "include_controls": true,
+   "deviations": [
+    {
+     "requested": "3 replicates (triplicate)",
+     "planned": "2 replicates",
+     "reason": "40 conditions in triplicate need 120 sample wells and 92 are available. Keeping every condition and cutting to 2 replicates needs 80."
+    }
+   ],
+   "assumptions": [
+    "Controls on: negative and reference controls in A1 to D1 (assay default)."
+   ],
+   "notes": ""
+  }
+ }
+]

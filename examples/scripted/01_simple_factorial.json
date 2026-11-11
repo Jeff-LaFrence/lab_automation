@@ -1,0 +1,32 @@
+[
+ {
+  "action": "submit_design",
+  "design": {
+   "title": "Catalyst loading by base equivalents at 20% co-solvent",
+   "grid": {
+    "catalyst_mol_pct": [
+     1,
+     2,
+     4,
+     8
+    ],
+    "base_equiv": [
+     1.0,
+     1.5,
+     2.0
+    ],
+    "cosolvent_pct": [
+     20
+    ]
+   },
+   "conditions": null,
+   "replicates": 3,
+   "include_controls": true,
+   "deviations": [],
+   "assumptions": [
+    "Controls on: negative and reference controls in A1 to D1 (assay default)."
+   ],
+   "notes": ""
+  }
+ }
+]

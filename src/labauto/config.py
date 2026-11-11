@@ -8,7 +8,10 @@ and max_ul.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+
+from pydantic import BaseModel, Field
 
 from labauto.models import Assay, FactorSpec, Workcell
 
@@ -168,3 +171,81 @@ def sample_wells(assay: Assay, include_controls: bool) -> list[str]:
         for ctrl in assay.controls.values():
             taken.update(ctrl.wells)
     return [w for w in labware.well_names(assay.plate_labware) if w not in taken]
+
+
+# ---------------------------------------------------------------- model endpoints (Stage 2)
+
+ENV_PREFIX = "LABAUTO_"
+
+
+class Endpoint(BaseModel):
+    """One model endpoint. The key is never printed or written to a record."""
+
+    label: str
+    provider: str = "openai_compatible"
+    base_url: str = ""
+    model: str = ""
+    api_key: str = Field(default="", repr=False, exclude=True)
+    context_tokens: int = 16000
+
+
+class Settings(BaseModel):
+    """The configured endpoints. Any of them may be missing."""
+
+    main: Endpoint | None = None
+    small: Endpoint | None = None
+    hosted: Endpoint | None = None
+    hosted_max_calls: int = 2
+
+
+def _int(value: str | None, default: int) -> int:
+    try:
+        return int(value) if value not in (None, "") else default
+    except ValueError:
+        return default
+
+
+def load_settings(env_file: str | Path | None = ".env", environ: dict | None = None) -> Settings:
+    """Read endpoint settings from .env and the environment. Environment variables win."""
+    from dotenv import dotenv_values
+
+    values: dict[str, str] = {}
+    if env_file is not None:
+        for candidate in (Path(env_file), repo_root() / Path(env_file).name):
+            if candidate.is_file():
+                values.update({k: v for k, v in dotenv_values(candidate).items() if v is not None})
+                break
+    env = os.environ if environ is None else environ
+    values.update({k: v for k, v in env.items() if k.startswith(ENV_PREFIX)})
+
+    def get(name: str) -> str:
+        return (values.get(ENV_PREFIX + name) or "").strip()
+
+    settings = Settings(hosted_max_calls=_int(get("HOSTED_MAX_CALLS_PER_RUN"), 2))
+    if get("MAIN_BASE_URL"):
+        settings.main = Endpoint(
+            label="local-main",
+            base_url=get("MAIN_BASE_URL"),
+            model=get("MAIN_MODEL"),
+            api_key=get("MAIN_API_KEY"),
+            context_tokens=_int(get("MAIN_CONTEXT_TOKENS"), 16000),
+        )
+    if get("SMALL_BASE_URL"):
+        settings.small = Endpoint(
+            label="local-small",
+            base_url=get("SMALL_BASE_URL"),
+            model=get("SMALL_MODEL"),
+            api_key=get("MAIN_API_KEY"),
+            context_tokens=_int(get("SMALL_CONTEXT_TOKENS"), 8000),
+        )
+    provider = get("HOSTED_PROVIDER")
+    if provider:
+        settings.hosted = Endpoint(
+            label="hosted",
+            provider=provider,
+            base_url=get("HOSTED_BASE_URL"),
+            model=get("HOSTED_MODEL"),
+            api_key=get("HOSTED_API_KEY"),
+            context_tokens=_int(get("HOSTED_CONTEXT_TOKENS"), 200000),
+        )
+    return settings

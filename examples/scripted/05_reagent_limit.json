@@ -1,0 +1,129 @@
+[
+ {
+  "action": "submit_design",
+  "design": {
+   "title": "Base sweep by co-solvent at 10 mol % catalyst",
+   "grid": {
+    "catalyst_mol_pct": [
+     10
+    ],
+    "base_equiv": [
+     0.5,
+     0.75,
+     1.0,
+     1.25,
+     1.5,
+     1.75,
+     2.0,
+     2.25,
+     2.5,
+     2.75,
+     3.0
+    ],
+    "cosolvent_pct": [
+     0,
+     20,
+     40
+    ]
+   },
+   "conditions": null,
+   "replicates": 3,
+   "include_controls": true,
+   "deviations": [],
+   "assumptions": [
+    "Controls on: negative and reference controls in A1 to D1 (assay default)."
+   ],
+   "notes": ""
+  }
+ },
+ {
+  "action": "submit_design",
+  "design": {
+   "title": "Base sweep by co-solvent at 10 mol % catalyst, in duplicate",
+   "grid": {
+    "catalyst_mol_pct": [
+     10
+    ],
+    "base_equiv": [
+     0.5,
+     0.75,
+     1.0,
+     1.25,
+     1.5,
+     1.75,
+     2.0,
+     2.25,
+     2.5,
+     2.75,
+     3.0
+    ],
+    "cosolvent_pct": [
+     0,
+     20,
+     40
+    ]
+   },
+   "conditions": null,
+   "replicates": 2,
+   "include_controls": true,
+   "deviations": [
+    {
+     "requested": "3 replicates (triplicate)",
+     "planned": "2 replicates",
+     "reason": "33 conditions in triplicate need 99 sample wells and 92 are available."
+    }
+   ],
+   "assumptions": [
+    "Controls on: negative and reference controls in A1 to D1 (assay default)."
+   ],
+   "notes": ""
+  }
+ },
+ {
+  "action": "submit_design",
+  "design": {
+   "title": "Base sweep at 0 and 20% co-solvent, 10 mol % catalyst, in duplicate",
+   "grid": {
+    "catalyst_mol_pct": [
+     10
+    ],
+    "base_equiv": [
+     0.5,
+     0.75,
+     1.0,
+     1.25,
+     1.5,
+     1.75,
+     2.0,
+     2.25,
+     2.5,
+     2.75,
+     3.0
+    ],
+    "cosolvent_pct": [
+     0,
+     20
+    ]
+   },
+   "conditions": null,
+   "replicates": 2,
+   "include_controls": true,
+   "deviations": [
+    {
+     "requested": "3 replicates (triplicate)",
+     "planned": "2 replicates",
+     "reason": "33 conditions in triplicate need 99 sample wells and 92 are available."
+    },
+    {
+     "requested": "co-solvent at 0, 20 and 40 %",
+     "planned": "co-solvent at 0 and 20 %",
+     "reason": "66 wells at 10 mol % need 1328 uL of catalyst and 1080 uL is usable. Dropping 40 % co-solvent keeps the full base sweep and needs 888 uL."
+    }
+   ],
+   "assumptions": [
+    "Controls on: negative and reference controls in A1 to D1 (assay default)."
+   ],
+   "notes": ""
+  }
+ }
+]
