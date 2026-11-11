@@ -1,9 +1,12 @@
 """Pick an endpoint for each model call, and log why.
 
 report_note goes to the small endpoint when one is configured. Every other
-role goes to main. If the prompt looks too big for the chosen endpoint (over
-80% of its context), the endpoint with the larger context is used. If none
-fits, the caller trims the attempt history to the latest attempt.
+role goes to main. data_reviewer, the overwatch, always stays on main: it is
+the generalist main model by design, so a large prompt never moves it to the
+small endpoint. For the other roles, if the prompt looks too big for the
+chosen endpoint (over 80% of its context), the endpoint with the larger
+context is used. If none fits, the caller trims the attempt history to the
+latest attempt.
 
 The token estimate is characters divided by 4.
 """
@@ -17,7 +20,11 @@ from pydantic import BaseModel
 
 from labauto.config import Endpoint, Settings
 
-ROLES = ("planner", "repair", "reviewer", "decider", "report_note")
+ROLES = ("planner", "repair", "reviewer", "decider", "report_note", "data_reviewer")
+# Roles that may run on the small endpoint. Others always start on main.
+SMALL_ROLES = ("report_note",)
+# Roles that never leave main, whatever the prompt size: the overwatch is the main model.
+MAIN_ONLY_ROLES = ("data_reviewer",)
 FILL_LIMIT = 0.8
 DEFAULT_CONTEXT = 16000
 
@@ -61,13 +68,17 @@ def route(
     if role not in ROLES:
         raise ValueError(f"unknown role '{role}'")
     endpoints = dict(_local(settings))
-    if role == "report_note" and "local-small" in endpoints:
-        label, reason = "local-small", "report_note goes to the small endpoint"
+    if role in MAIN_ONLY_ROLES:
+        endpoints = {"local-main": endpoints["local-main"]}
+    if role in SMALL_ROLES and "local-small" in endpoints:
+        label, reason = "local-small", f"{role} goes to the small endpoint"
     else:
         label = "local-main"
         reason = f"{role} goes to the main endpoint"
-        if role == "report_note":
-            reason = "report_note goes to main: no small endpoint configured"
+        if role in SMALL_ROLES:
+            reason = f"{role} goes to main: no small endpoint configured"
+        elif role in MAIN_ONLY_ROLES:
+            reason = f"{role} goes to the main endpoint: the overwatch is the main model"
     trim = False
     if est_prompt_tokens > FILL_LIMIT * endpoints[label]:
         biggest = max(endpoints.items(), key=lambda kv: kv[1])
