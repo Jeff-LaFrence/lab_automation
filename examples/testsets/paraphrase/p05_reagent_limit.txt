@@ -1,0 +1,1 @@
+Please set up a full plate with catalyst at 10 mol% throughout. Base from 0.5 to 3.0 eq. in increments of 0.25 eq., co-solvent at 0, 20 and 40%, each condition in triplicate.

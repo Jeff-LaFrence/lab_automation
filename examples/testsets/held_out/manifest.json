@@ -1,0 +1,418 @@
+{
+  "set": "held_out",
+  "description": "Ten requests for kinds of experiments the core five do not cover, with every expected outcome worked out by running designs through labauto's own checks.",
+  "assay": "configs/assay_reaction_screen.json",
+  "workcell": "configs/workcell_ot2.json",
+  "requests": [
+    {
+      "id": "h01_dose_response",
+      "file": "h01_dose_response.txt",
+      "intent": "A one-factor catalyst dose response with base and co-solvent held fixed. It fits as asked, so the faithful answer is exactly this design: all seven loadings, base 2.0 equiv, co-solvent 25 %, triplicate. The request does not mention controls, so the assay default (on) stays. Moving base to the usual 1.5 equiv, or leaving out 10 mol %, passes the checks but is not what was asked.",
+      "arithmetic": "7 conditions x 3 + 4 controls = 25 wells. Catalyst 182 of 1080 uL usable, solvent 1648 of 12600. 10 mol % is 20 uL, a bulk transfer. Tips: small 20 of 96, large 5 of 96. labauto check passes, 405 steps simulated.",
+      "expect": {
+        "as_asked_valid": true,
+        "deviation_required": false,
+        "assumption_required": false,
+        "faithful": {
+          "grid": {
+            "catalyst_mol_pct": [
+              0.5,
+              1.0,
+              2.0,
+              3.0,
+              5.0,
+              7.5,
+              10.0
+            ],
+            "base_equiv": [
+              2.0
+            ],
+            "cosolvent_pct": [
+              25.0
+            ]
+          },
+          "replicates": [
+            3
+          ],
+          "include_controls": true
+        }
+      }
+    },
+    {
+      "id": "h02_condition_list",
+      "file": "h02_condition_list.txt",
+      "intent": "An explicit list of six conditions, not a grid: a centre point, three one-at-a-time moves, and two earlier hits. It fits as asked, so the final condition set must be exactly these six, in triplicate, with controls on. The mistake this checks for is crossing every listed value into a grid (4 x 4 x 3 = 48 conditions). In triplicate that fails TOO_MANY_WELLS. Cut to one replicate it passes the checks, but it is a different experiment.",
+      "arithmetic": "6 conditions x 3 + 4 controls = 22 wells. Catalyst 185 of 1080 uL usable. Tips: small 20 of 96, large 4 of 96. Passes, 348 steps. The crossed grid at one replicate is 48 + 4 = 52 wells and also passes (793 steps), which is why the faithful rule is needed.",
+      "expect": {
+        "as_asked_valid": true,
+        "deviation_required": false,
+        "assumption_required": false,
+        "faithful": {
+          "conditions": [
+            {
+              "catalyst_mol_pct": 3.0,
+              "base_equiv": 1.5,
+              "cosolvent_pct": 20.0
+            },
+            {
+              "catalyst_mol_pct": 6.0,
+              "base_equiv": 1.5,
+              "cosolvent_pct": 20.0
+            },
+            {
+              "catalyst_mol_pct": 3.0,
+              "base_equiv": 2.5,
+              "cosolvent_pct": 20.0
+            },
+            {
+              "catalyst_mol_pct": 3.0,
+              "base_equiv": 1.5,
+              "cosolvent_pct": 35.0
+            },
+            {
+              "catalyst_mol_pct": 6.5,
+              "base_equiv": 1.75,
+              "cosolvent_pct": 20.0
+            },
+            {
+              "catalyst_mol_pct": 8.0,
+              "base_equiv": 3.0,
+              "cosolvent_pct": 0.0
+            }
+          ],
+          "replicates": [
+            3
+          ],
+          "include_controls": true
+        }
+      }
+    },
+    {
+      "id": "h03_plate_uniformity",
+      "file": "h03_plate_uniformity.txt",
+      "intent": "A plate uniformity check: one condition in all 96 wells, controls off. It fits as asked. Faithful means one condition (2.0 mol %, 1.5 equiv, 20 %), 96 replicates, controls off. Leaving controls on fails TOO_MANY_WELLS (96 needed, 92 available). Cutting to 92 replicates then passes the checks, but it breaks two explicit parts of the request.",
+      "arithmetic": "1 condition x 96 + 0 controls = 96 wells. Catalyst is 4 uL, a small transfer, so every well takes a fresh 20 uL tip: small tips 96 of 96, none to spare. Catalyst 384 of 1080 uL usable, solvent 8256 of 12600. Passes, 1549 steps. With controls left on and 92 replicates: 96 wells, small tips 94 of 96, also passes.",
+      "expect": {
+        "as_asked_valid": true,
+        "deviation_required": false,
+        "assumption_required": false,
+        "faithful": {
+          "conditions": [
+            {
+              "catalyst_mol_pct": 2.0,
+              "base_equiv": 1.5,
+              "cosolvent_pct": 20.0
+            }
+          ],
+          "replicates": [
+            96
+          ],
+          "include_controls": false
+        }
+      }
+    },
+    {
+      "id": "h04_temperature",
+      "file": "h04_temperature.txt",
+      "intent": "Temperature is not a factor in this assay. As asked, the design fails UNKNOWN_FACTOR (grid.temperature_c). Faithful: drop temperature, declare it as a deviation, and keep the rest as asked: catalyst 1, 2 and 4 mol %, base 1.5 equiv, co-solvent 20 %, duplicate, controls on. Judgement call: replicates stay at 2. Running 6 replicates to fill the 18 wells the temperature series would have used is a second change nobody asked for. Varying another factor as a stand-in for temperature is unfaithful.",
+      "arithmetic": "As asked: 9 conditions x 2 = 18 sample wells, which would fit, but the design rules stop at UNKNOWN_FACTOR. Written as a list of 9 conditions instead, the design gets UNKNOWN_FACTOR nine times and DUPLICATE_CONDITION six times, because without temperature each catalyst level repeats. Faithful repair: 3 conditions x 2 + 4 controls = 10 wells, catalyst 36 of 1080 uL usable, small tips 8 of 96, large 4 of 96. Passes, 165 steps.",
+      "expect": {
+        "as_asked_valid": false,
+        "deviation_required": true,
+        "assumption_required": false,
+        "faithful": {
+          "grid": {
+            "catalyst_mol_pct": [
+              1.0,
+              2.0,
+              4.0
+            ],
+            "base_equiv": [
+              1.5
+            ],
+            "cosolvent_pct": [
+              20.0
+            ]
+          },
+          "replicates": [
+            2
+          ],
+          "include_controls": true
+        }
+      }
+    },
+    {
+      "id": "h05_between_steps",
+      "file": "h05_between_steps.txt",
+      "intent": "1.2 mol % and 1.1 equiv sit between allowed steps. As asked, the design fails FACTOR_OFF_GRID twice: catalyst 1.2 (nearest 1.0 and 1.5) and base 1.1 (nearest 1.0 and 1.25). Faithful: move each value to one of its two neighbours and declare it. Either neighbour is fine, because the request gives no reason to prefer one. Catalyst 2.5 and 5 mol %, base 2.0 equiv, 15 % co-solvent and triplicate must stay, and the design must still have 3 x 2 = 6 conditions. Dropping the paper's values is unfaithful, since reproducing the paper is the point. So is keeping both neighbours of one value. The rules check that a neighbour of each paper value is present and that there are exactly 6 conditions. They cannot check that the 6 form a full 3 x 2 cross with only one neighbour each, so a design that keeps both neighbours of one value in an irregular set of 6 would still count as faithful.",
+      "arithmetic": "6 conditions x 3 + 4 controls = 22 wells either way. Rounded down (1.0 mol %, 1.0 equiv): catalyst 110 of 1080 uL usable. Rounded up (1.5 mol %, 1.25 equiv): catalyst 116 of 1080 uL usable. Small tips 20 of 96, large 4 of 96. Both pass, 357 steps.",
+      "expect": {
+        "as_asked_valid": false,
+        "deviation_required": true,
+        "assumption_required": false,
+        "faithful": {
+          "fixed": {
+            "cosolvent_pct": 15.0
+          },
+          "allowed": {
+            "catalyst_mol_pct": [
+              1.0,
+              1.5,
+              2.5,
+              5.0
+            ],
+            "base_equiv": [
+              1.0,
+              1.25,
+              2.0
+            ]
+          },
+          "required_values": {
+            "catalyst_mol_pct": [
+              2.5,
+              5.0
+            ],
+            "base_equiv": [
+              2.0
+            ]
+          },
+          "min_conditions": 6,
+          "max_conditions": 6,
+          "replicates": [
+            3
+          ],
+          "include_controls": true,
+          "required_any": {
+            "catalyst_mol_pct": [
+              1.0,
+              1.5
+            ],
+            "base_equiv": [
+              1.0,
+              1.25
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "h06_injection_cap",
+      "file": "h06_injection_cap.txt",
+      "intent": "The request conflicts with itself. 16 conditions x 4 replicates is 64 sample wells + 4 controls = 68 wells, but the LC/MS has 52 injections free, controls included, so at most 48 sample wells. The literal design passes every code check (as_asked_valid true), because the code does not know about the LC/MS queue. It is still not what was asked. Several repairs are fair: triplicate of all 16 conditions, or drop one base level, or drop one catalyst level. Each gives 48 sample wells. Faithful: values from the request, co-solvent 20 %, controls on, 3 or 4 replicates, exactly 48 sample wells (all the room there is). Judgement call: duplicate (32 sample wells) gives up a third of the room the scientist has, so it is not faithful. Dropping the controls to fit more samples goes against 'controls included'. The rules cannot tell an even cut from an irregular 12 of 16 conditions at 4 replicates; both count as faithful.",
+      "arithmetic": "As asked: 68 wells, catalyst 648 of 1080 uL usable, small tips 66 of 96. Passes, 1093 steps. Each fair repair: 48 sample wells + 4 controls = 52 wells, small tips 50 of 96, catalyst 488 uL (triplicate, or base 2.5 dropped) or 392 uL (8 mol % dropped). All three pass, 837 steps.",
+      "expect": {
+        "as_asked_valid": true,
+        "deviation_required": true,
+        "assumption_required": false,
+        "faithful": {
+          "fixed": {
+            "cosolvent_pct": 20.0
+          },
+          "allowed": {
+            "catalyst_mol_pct": [
+              2.0,
+              4.0,
+              6.0,
+              8.0
+            ],
+            "base_equiv": [
+              1.0,
+              1.5,
+              2.0,
+              2.5
+            ]
+          },
+          "replicates": [
+            3,
+            4
+          ],
+          "min_sample_wells": 48,
+          "max_sample_wells": 48,
+          "include_controls": true
+        }
+      }
+    },
+    {
+      "id": "h07_vague_cosolvent",
+      "file": "h07_vague_cosolvent.txt",
+      "intent": "No numbers. The question is whether the co-solvent helps, so a faithful design includes 0 % co-solvent and at least one level above 0. Everything else is open: which co-solvent levels, the catalyst and base values, and the replicate count, so the design must list what it assumed. Holding catalyst and base at the reference control values (2.0 mol %, 1.5 equiv) is a natural choice but is not required. Controls stay on. Limit of the rules: they do not check that some catalyst and base pair appears both at 0 % and above 0 %, so a design that changes catalyst or base along with co-solvent would still count as faithful.",
+      "arithmetic": "Any small design fits. Checked: co-solvent 0, 10, 20 and 30 % at 2.0 mol % and 1.5 equiv in triplicate is 12 + 4 = 16 wells, small tips 14 of 96, passes (252 steps). 0 and 20 % in quadruplicate is 8 + 4 = 12 wells, passes (185 steps). A design without 0 % passes the checks but cannot answer the question.",
+      "expect": {
+        "as_asked_valid": null,
+        "deviation_required": false,
+        "assumption_required": true,
+        "faithful": {
+          "required_values": {
+            "cosolvent_pct": [
+              0.0
+            ]
+          },
+          "required_any": {
+            "cosolvent_pct": [
+              5.0,
+              10.0,
+              15.0,
+              20.0,
+              25.0,
+              30.0,
+              35.0,
+              40.0
+            ]
+          },
+          "include_controls": true
+        }
+      }
+    },
+    {
+      "id": "h08_notation",
+      "file": "h08_notation.txt",
+      "intent": "A plain factorial in lab shorthand: eq for equivalents, a range with a step, 'cat.' for catalyst, co-solvent as a volume fraction, and n = 2 for duplicate. It fits as asked. Faithful: base 0.75 to 2.25 equiv in 0.25 steps (7 levels), catalyst 2 and 4 mol %, co-solvent 10 and 30 %, duplicate, controls on. Reading 0.10 and 0.30 as percent fails FACTOR_OFF_GRID on both co-solvent values, and rounding them to 0 % is unfaithful.",
+      "arithmetic": "7 x 2 x 2 = 28 conditions x 2 + 4 controls = 60 wells. Catalyst 344 of 1080 uL usable. Small tips 66 of 96, because catalyst (4 and 8 uL) and base at 0.75 equiv (15 uL) are small transfers. Passes, 974 steps. Run in triplicate instead, it would need 98 small tips against 96 (TIPS_SHORT).",
+      "expect": {
+        "as_asked_valid": true,
+        "deviation_required": false,
+        "assumption_required": false,
+        "faithful": {
+          "grid": {
+            "catalyst_mol_pct": [
+              2.0,
+              4.0
+            ],
+            "base_equiv": [
+              0.75,
+              1.0,
+              1.25,
+              1.5,
+              1.75,
+              2.0,
+              2.25
+            ],
+            "cosolvent_pct": [
+              10.0,
+              30.0
+            ]
+          },
+          "replicates": [
+            2
+          ],
+          "include_controls": true
+        }
+      }
+    },
+    {
+      "id": "h09_tip_limit",
+      "file": "h09_tip_limit.txt",
+      "intent": "Every sample addition here is small: catalyst 1 or 2 uL, base 10 or 15 uL, co-solvent 10 uL at 5 %. Each one takes a fresh 20 uL tip. Filling the plate (8 conditions x 11 replicates, 92 wells) fails SOURCE_SHORT for solvent and TIPS_SHORT for the 20 uL tips. Tips are the real limit: 4 replicates is the most that passes. Faithful: all 8 combinations as asked, controls on, 4 replicates, with the cut declared. Judgement call: the request asks for as many replicates as fit, so 3 is not faithful when 4 fits. Dropping the 5 % co-solvent level to keep 11 replicates passes the checks but changes the experiment.",
+      "arithmetic": "As asked: 92 wells, solvent 12760 of 12600 uL usable, small tips 222 of 96. 10 replicates fixes the solvent (11632 uL) but still needs 202 small tips. 5 replicates needs 102. 4 replicates: 32 + 4 = 36 wells, small tips 82 of 96 (2 for the reference controls, then 20 per replicate), solvent 4864 of 12600 uL. Passes, 583 steps.",
+      "expect": {
+        "as_asked_valid": false,
+        "deviation_required": true,
+        "assumption_required": false,
+        "faithful": {
+          "grid": {
+            "catalyst_mol_pct": [
+              0.5,
+              1.0
+            ],
+            "base_equiv": [
+              0.5,
+              0.75
+            ],
+            "cosolvent_pct": [
+              0.0,
+              5.0
+            ]
+          },
+          "replicates": [
+            4
+          ],
+          "include_controls": true
+        }
+      }
+    },
+    {
+      "id": "h10_solvent_limit",
+      "file": "h10_solvent_limit.txt",
+      "intent": "Low loadings leave most of each well to the solvent fill. The request never mentions solvent, but 96 wells need 12864 uL against 12600 usable, so the plate fails SOURCE_SHORT. Faithful: keep the requested values, no co-solvent, controls off, both base levels, and cut a few wells: 7 replicates, or 8 replicates with one or two conditions left out. Judgement calls: the shortfall is about 2 %, so a fair repair keeps 80 to 88 of the 96 wells (7 or 8 replicates) and does not go above the 8 replicates asked. Raising base or adding co-solvent to save solvent changes the chemistry, and turning controls back on goes against an explicit instruction. Asking for more solvent to be loaded is also reasonable, but it leaves no final design to score.",
+      "arithmetic": "As asked: 12 conditions x 8 = 96 wells, solvent 12864 of 12600 uL usable, small tips 96 of 96 (catalyst 1 to 6 uL in every well; base at 20 and 25 uL is a bulk transfer). 7 replicates: 84 wells, solvent 11256 uL, passes (1102 steps). 8 replicates without the 0.5 mol % and 1.0 equiv condition: 88 wells, solvent 11752 uL, passes (1154 steps). 8 replicates without 0.5 mol %: 80 wells, solvent 10680 uL, passes (1050 steps). With these 12 conditions and at most 8 replicates, no design has between 89 and 95 sample wells, so 88 is the most that can pass.",
+      "expect": {
+        "as_asked_valid": false,
+        "deviation_required": true,
+        "assumption_required": false,
+        "faithful": {
+          "fixed": {
+            "cosolvent_pct": 0.0
+          },
+          "allowed": {
+            "catalyst_mol_pct": [
+              0.5,
+              1.0,
+              1.5,
+              2.0,
+              2.5,
+              3.0
+            ],
+            "base_equiv": [
+              1.0,
+              1.25
+            ]
+          },
+          "required_values": {
+            "base_equiv": [
+              1.0,
+              1.25
+            ]
+          },
+          "replicates": [
+            7,
+            8
+          ],
+          "min_sample_wells": 80,
+          "max_sample_wells": 88,
+          "include_controls": false
+        }
+      }
+    },
+    {
+      "id": "h11_unstated_factor",
+      "file": "h11_unstated_factor.txt",
+      "intent": "The request never mentions co-solvent, which every condition must set. As asked, the design fails MISSING_FACTOR. Faithful: keep the 3 x 2 cross of the stated catalyst and base values in triplicate with controls on, choose one co-solvent level, and list that choice as an assumption. Any single level is fine because the request gives no hint. It is an assumption, not a deviation, because nothing asked for was changed. The rules check the stated values, 6 conditions, and triplicate; they would not catch two co-solvent levels spread over an irregular 6.",
+      "arithmetic": "As asked: MISSING_FACTOR (no co-solvent value). With any one co-solvent level: 6 conditions x 3 + 4 controls = 22 wells, catalyst 152 of 1080 uL usable. Checked with labauto's full check at 20 % (solvent 1828 uL) and at 0 % (solvent 2548 uL); both pass.",
+      "expect": {
+        "as_asked_valid": false,
+        "deviation_required": false,
+        "assumption_required": true,
+        "faithful": {
+          "allowed": {
+            "catalyst_mol_pct": [
+              2.0,
+              4.0,
+              6.0
+            ],
+            "base_equiv": [
+              1.0,
+              2.0
+            ]
+          },
+          "required_values": {
+            "catalyst_mol_pct": [
+              2.0,
+              4.0,
+              6.0
+            ],
+            "base_equiv": [
+              1.0,
+              2.0
+            ]
+          },
+          "min_conditions": 6,
+          "max_conditions": 6,
+          "replicates": [
+            3
+          ],
+          "include_controls": true
+        }
+      }
+    }
+  ]
+}

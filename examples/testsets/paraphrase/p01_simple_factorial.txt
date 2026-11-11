@@ -1,0 +1,1 @@
+Catalyst 1, 2, 4, 8 mol% vs base 1.0, 1.5, 2.0 eq; cosolvent 20%; n = 3.

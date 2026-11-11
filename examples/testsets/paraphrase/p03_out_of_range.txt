@@ -1,0 +1,5 @@
+Please compare these:
+- base: 1.5 and 3.5 equiv.
+- catalyst: 5, 10 and 15 mol%
+- co-solvent: 10%
+- replicates: 4
