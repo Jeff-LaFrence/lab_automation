@@ -154,3 +154,18 @@ def test_schedule_is_pure(assay, workcell, good_design):
     plan = expand(good_design, assay)
     assert schedule(plan, workcell, assay) == schedule(plan, workcell, assay)
     assert expand(good_design, assay) == plan
+
+
+def test_small_transfers_follow_addition_order_then_column_order(assay, workcell):
+    design = make_design(
+        grid={"catalyst_mol_pct": [1, 2], "base_equiv": [0.5], "cosolvent_pct": [20]},
+        replicates=2,
+    )
+    rows = schedule(expand(design, assay), workcell, assay).rows
+    small = [r for r in rows if r.dispense == "in_liquid"]
+    reagents = [r.reagent for r in small]
+    assert reagents == sorted(reagents, key=["base", "catalyst"].index)
+    assert set(reagents) == {"base", "catalyst"}
+    base_wells = [r.dest_well for r in small if r.reagent == "base"]
+    assert base_wells == ["E1", "F1", "G1", "H1"]
+    assert all(r.tip == "new" and r.pipette == "small" for r in small)

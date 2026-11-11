@@ -142,6 +142,8 @@ def what_would_run(result: CheckResult, assay: Assay, workcell: Workcell) -> lis
     plan = result.plan
     if plan is None:
         return lines
+    if not plan.wells:
+        return ["0 wells"]
     samples = [w for w in plan.wells if w.role == "sample"]
     controls = [w for w in plan.wells if w.role != "sample"]
     n_cond = len({w.condition_index for w in samples})
@@ -172,14 +174,30 @@ def what_would_run(result: CheckResult, assay: Assay, workcell: Workcell) -> lis
             parts.append((frac, f"{reagent} {fmt_ul(need)} of {fmt_ul(usable)} uL usable"))
         parts.sort(key=lambda p: -p[0])
         lines.append("Reagent use: " + ", ".join(p[1] for p in parts))
-        tip_parts = []
-        for pip in workcell.pipettes:
-            entry = workcell.deck_entry(pip.tips)
-            spec = labware.get(entry.labware) if entry else None
-            have = spec.count if spec else 0
-            tip_parts.append(f"{pip.name} {result.worklist.tips_needed.get(pip.tips, 0)} of {have}")
-        lines.append("Tips: " + ", ".join(tip_parts))
+        lines.append("Tips: " + tip_text(result, workcell))
     return lines
+
+
+def tip_text(result: CheckResult, workcell: Workcell) -> str:
+    """Tips used per pipette, out of its rack. Shared racks are reported per rack instead."""
+    rows = result.worklist.rows if result.worklist else []
+    racks = [p.tips for p in workcell.pipettes]
+
+    def have(rack: str) -> int:
+        entry = workcell.deck_entry(rack)
+        spec = labware.get(entry.labware) if entry else None
+        return spec.count if spec else 0
+
+    if len(set(racks)) == len(racks):
+        parts = []
+        for pip in workcell.pipettes:
+            used = sum(1 for r in rows if r.pipette == pip.name and r.tip == "new")
+            parts.append(f"{pip.name} {used} of {have(pip.tips)}")
+        return ", ".join(parts)
+    needed = result.worklist.tips_needed if result.worklist else {}
+    return ", ".join(
+        f"{rack} {needed.get(rack, 0)} of {have(rack)}" for rack in dict.fromkeys(racks)
+    )
 
 
 def check_lines(result: CheckResult) -> list[str]:
@@ -248,7 +266,13 @@ def render_summary(
         out += error_lines(result.errors)
         out.append("")
     out.append(f"Files: {', '.join(files)}  ")
-    out.append(f"Design hash: {result.design_hash or 'none (plan input)'}  ")
+    if result.design_hash:
+        design_text = result.design_hash
+    elif result.input_kind == "plan":
+        design_text = "none (plan input)"
+    else:
+        design_text = "none (the design did not parse)"
+    out.append(f"Design hash: {design_text}  ")
     out.append(f"Protocol hash: {result.protocol_hash or 'none (not compiled)'}")
     return "\n".join(out) + "\n"
 

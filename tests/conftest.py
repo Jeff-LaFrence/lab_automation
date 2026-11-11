@@ -18,6 +18,12 @@ from labauto.config import load_assay, load_workcell  # noqa: E402
 from labauto.models import Design  # noqa: E402
 
 
+def pytest_configure(config):
+    """Keep pytest's temporary folders inside this repository, not the system temp folder."""
+    if not config.option.basetemp:
+        config.option.basetemp = str(ROOT / ".labauto" / "pytest")
+
+
 @pytest.fixture
 def root() -> Path:
     return ROOT

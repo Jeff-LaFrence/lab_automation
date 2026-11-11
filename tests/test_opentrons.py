@@ -210,3 +210,89 @@ def test_simulator_does_not_track_source_volumes():
         )
     )
     assert simulate_source(src, None).ok
+
+
+# ---------------------------------------------------------------- ledger check
+
+
+def test_ledger_check_catches_changed_missing_and_misplaced_volumes(
+    assay, workcell, good_design, tmp_path
+):
+    from labauto.models import LedgerEntry
+    from labauto.pipeline import ledger_check
+
+    result = check(good_design, assay, workcell, out_dir=tmp_path)
+    ledger = list(result.sim.ledger)
+    first = ledger[0]
+    ledger[0] = first.model_copy(update={"volume_ul": first.volume_ul - 1})
+    missing = ledger.pop(1)
+    ledger.append(
+        LedgerEntry(dest_labware="reservoir", dest_well="A9", reagent="solvent", volume_ul=5)
+    )
+    sim = result.sim.model_copy(update={"ledger": ledger})
+    errors = ledger_check(result.plan, sim)
+    where = {e.where for e in errors}
+    assert all(e.code == "LEDGER_MISMATCH" and e.needs_human for e in errors)
+    assert f"plate:{first.dest_well}:{first.reagent}" in where
+    assert f"plate:{missing.dest_well}:{missing.reagent}" in where
+    assert "reservoir:A9:solvent" in where
+    assert f"total:{first.reagent}" in where
+
+
+def test_pipeline_stops_at_the_ledger_layer(assay, workcell, good_design, tmp_path, monkeypatch):
+    real = OpentronsOT2.simulate
+
+    def lossy(self, artifact, wc):
+        sim = real(self, artifact, wc)
+        e = sim.ledger[0]
+        sim.ledger[0] = e.model_copy(update={"volume_ul": e.volume_ul + 0.5})
+        return sim
+
+    monkeypatch.setattr(OpentronsOT2, "simulate", lossy)
+    result = check(good_design, assay, workcell, out_dir=tmp_path)
+    assert result.failed_layer == "ledger"
+    assert result.errors[0].code == "LEDGER_MISMATCH"
+
+
+def test_hand_written_plan_without_totals_passes(assay, workcell, tmp_path):
+    plan = Plan(
+        plan_id="p-hand",
+        assay_id=assay.assay_id,
+        wells=[
+            PlanWell(
+                well="E1",
+                role="sample",
+                add_ul={"solvent": 98, "substrate": 40, "cosolvent": 40, "base": 20, "catalyst": 2},
+            )
+        ],
+    )
+    assert check(plan, assay, workcell, out_dir=tmp_path).ok
+
+
+def test_fine_volumes_are_written_without_rounding(assay, workcell, tmp_path):
+    vols = {
+        "solvent": 73.8765433,
+        "substrate": 40,
+        "cosolvent": 40,
+        "base": 30,
+        "catalyst": 16.1234567,
+    }
+    plan = Plan(
+        plan_id="p-fine",
+        assay_id=assay.assay_id,
+        wells=[PlanWell(well="E1", role="sample", add_ul=vols)],
+    )
+    result = check(plan, assay, workcell, out_dir=tmp_path)
+    assert result.ok, result.errors
+
+
+def test_near_grid_value_gives_an_exact_volume(assay, workcell, tmp_path):
+    design = make_design(
+        grid={"catalyst_mol_pct": [2], "base_equiv": [1.00000015], "cosolvent_pct": [20]},
+        replicates=1,
+    )
+    result = check(design, assay, workcell, out_dir=tmp_path)
+    assert result.ok, result.errors
+    sample = next(w for w in result.plan.wells if w.role == "sample")
+    assert sample.add_ul["base"] == 20
+    assert sample.conditions["base_equiv"] == 1.0

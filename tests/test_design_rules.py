@@ -134,3 +134,45 @@ def test_every_error_is_returned(assay):
         "FACTOR_OFF_GRID",
         "BAD_REPLICATES",
     ]
+
+
+def test_duplicate_found_even_when_both_conditions_miss_a_factor(assay):
+    cond = {"catalyst_mol_pct": 1, "base_equiv": 1.0}
+    design = make_design(grid=None, conditions=[cond, dict(cond)])
+    assert codes(validate_design(design, assay)) == [
+        "MISSING_FACTOR",
+        "MISSING_FACTOR",
+        "DUPLICATE_CONDITION",
+    ]
+
+
+def test_values_that_give_the_same_volume_are_duplicates(assay):
+    a = {"catalyst_mol_pct": 2.0, "base_equiv": 1.5, "cosolvent_pct": 20}
+    b = {"catalyst_mol_pct": 2.0000001, "base_equiv": 1.5, "cosolvent_pct": 20}
+    design = make_design(grid=None, conditions=[a, b])
+    assert codes(validate_design(design, assay)) == ["DUPLICATE_CONDITION"]
+
+
+def test_typo_inside_layout_fails_parsing():
+    _, errors = parse_design({"grid": {}, "layout": {"strategy": "randomized", "sed": 7}})
+    assert codes(errors) == ["SCHEMA_INVALID"]
+    assert "layout.sed" in errors[0].where
+
+
+def test_boolean_or_text_factor_value_fails_parsing():
+    for bad in (True, "2"):
+        _, errors = parse_design({"grid": {"catalyst_mol_pct": [bad]}})
+        assert codes(errors) == ["SCHEMA_INVALID"]
+
+
+def test_unknown_grid_factor_is_not_counted_in_too_many_wells(assay):
+    design = make_design(
+        grid={
+            "catalyst_mol_pct": [1, 2],
+            "base_equiv": [1.0],
+            "cosolvent_pct": [20],
+            "temp_c": list(range(60)),
+        },
+        replicates=2,
+    )
+    assert codes(validate_design(design, assay)) == ["UNKNOWN_FACTOR"]

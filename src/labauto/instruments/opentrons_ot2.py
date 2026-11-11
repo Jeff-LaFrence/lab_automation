@@ -15,7 +15,7 @@ from collections import defaultdict
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-from labauto.config import fmt_ul, repo_root
+from labauto.config import fmt_code, repo_root
 from labauto.instruments.base import scrub_paths
 from labauto.models import LedgerEntry, Plan, PlanError, SimResult, Workcell, Worklist
 
@@ -91,7 +91,7 @@ class OpentronsOT2:
 
     def valid_position(self, position: dict) -> bool:
         slot = position.get("slot")
-        return set(position) == {"slot"} and isinstance(slot, int) and 1 <= slot <= 11
+        return set(position) == {"slot"} and type(slot) is int and 1 <= slot <= 11
 
     # ------------------------------------------------------------ compile
 
@@ -154,7 +154,7 @@ class OpentronsOT2:
                 lines.append(f'    protocol.comment("{text}")')
             src = f'{lw_var.get(row.source_labware, row.source_labware)}["{row.source_well}"]'
             dst_well = f'{lw_var.get(row.dest_labware, row.dest_labware)}["{row.dest_well}"]'
-            vol = fmt_ul(row.volume_ul)
+            vol = fmt_code(row.volume_ul)
             if row.tip == "new":
                 lines.append(f"    {p}.pick_up_tip()")
             lines.append(f"    {p}.aspirate({vol}, {src})")

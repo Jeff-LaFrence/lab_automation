@@ -118,3 +118,64 @@ def test_tips_short_gives_both_numbers(assay, workcell):
 def test_unknown_instrument(assay, workcell, good_design):
     errors = run_rules(good_design, assay, edit(workcell, lambda d: d.update(instrument="robot_x")))
     assert codes(errors) == ["UNKNOWN_INSTRUMENT"]
+
+
+def test_duplicate_deck_name(assay, workcell, good_design):
+    def dup(d):
+        d["deck"].append(
+            {"name": "reservoir", "labware": "plate_96_flat_360ul", "position": {"slot": 5}}
+        )
+
+    errors = run_rules(good_design, assay, edit(workcell, dup))
+    assert "DUPLICATE_NAME" in codes(errors)
+    assert errors[0].needs_human
+
+
+def test_two_pipettes_on_one_mount(assay, workcell, good_design):
+    def same_mount(d):
+        d["pipettes"][1]["mount"] = "left"
+
+    assert codes(run_rules(good_design, assay, edit(workcell, same_mount))) == ["DUPLICATE_NAME"]
+
+
+def test_two_reagents_in_one_source_well(assay, workcell, good_design):
+    def share(d):
+        d["inventory"]["catalyst"]["well"] = "A1"
+
+    errors = run_rules(good_design, assay, edit(workcell, share))
+    assert codes(errors) == ["SOURCE_CONFLICT"]
+    assert "substrate, catalyst" in errors[0].message or "catalyst, substrate" in errors[0].message
+
+
+def test_plan_plate_must_be_the_assay_plate(assay, workcell, good_design):
+    plan = expand(good_design, assay).model_copy(update={"plate": "reservoir"})
+    worklist = schedule(plan, workcell, assay)
+    errors = validate_worklist(worklist, plan, workcell, assay)
+    assert codes(errors) == ["UNKNOWN_LABWARE"]
+    assert "reservoir_12_15ml" in errors[0].message
+
+
+def test_boolean_slot_is_a_bad_slot(assay, workcell, good_design):
+    def boolean(d):
+        d["deck"][1]["position"] = {"slot": True}
+
+    assert "BAD_SLOT" in codes(run_rules(good_design, assay, edit(workcell, boolean)))
+
+
+def test_missing_tip_rack_is_not_also_tips_short(assay, workcell, good_design):
+    def no_rack(d):
+        d["pipettes"][0]["tips"] = "tips_none"
+
+    assert codes(run_rules(good_design, assay, edit(workcell, no_rack))) == ["UNKNOWN_LABWARE"]
+
+
+def test_bad_inventory_numbers_fail_when_the_file_loads(workcell):
+    import pydantic
+    import pytest
+
+    for change in (
+        lambda d: d["inventory"]["catalyst"].update(volume_ul=-5),
+        lambda d: d.update(dead_volume_fraction=1.5),
+    ):
+        with pytest.raises(pydantic.ValidationError):
+            edit(workcell, change)

@@ -90,3 +90,33 @@ def test_demo_prints_six_expected_rows(tmp_path, capsys):
     ]:
         assert line in out
     assert "good_factorial           PASS                40 wells," in out
+
+
+def test_empty_plan_is_caught_not_a_crash(tmp_path):
+    f = tmp_path / "empty.json"
+    f.write_text(
+        json.dumps({"plan_id": "p-empty", "assay_id": "generic_reaction_screen_v1", "wells": []})
+    )
+    assert main(["check", str(f), "--runs", str(tmp_path / "runs")]) == 1
+    summary = (only_run(tmp_path / "runs") / "summary.md").read_text()
+    assert "CAUGHT at plan" in summary and "EMPTY_PLAN" in summary
+
+
+def test_design_that_does_not_parse_says_so(tmp_path):
+    f = tmp_path / "typo.json"
+    f.write_text(json.dumps({"grid": {"catalyst_mol_pct": [1]}, "replicate": 3}))
+    assert main(["check", str(f), "--runs", str(tmp_path / "runs")]) == 1
+    summary = (only_run(tmp_path / "runs") / "summary.md").read_text()
+    assert "Design hash: none (the design did not parse)" in summary
+    assert "plan input" not in summary
+
+
+def test_input_path_outside_the_working_folder_is_shortened(tmp_path, monkeypatch, root):
+    work = tmp_path / "work"
+    work.mkdir()
+    monkeypatch.chdir(work)
+    f = tmp_path / "outside.json"
+    f.write_text((root / "examples/designs/good_factorial.json").read_text())
+    assert main(["check", str(f), "--runs", str(tmp_path / "runs")]) == 0
+    summary = (only_run(tmp_path / "runs") / "summary.md").read_text()
+    assert "Input: outside.json" in summary

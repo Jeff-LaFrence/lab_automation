@@ -53,10 +53,21 @@ def load_workcell(path: str | Path = DEFAULT_WORKCELL) -> Workcell:
 
 
 def factor_volume(value: float, spec: FactorSpec) -> float:
-    """Volume in microliters that gives this factor value."""
+    """Volume in microliters that gives this factor value.
+
+    A value that on_grid accepts is snapped to its exact step, so the volume
+    the plan asks for is the same number the protocol will dispense.
+    """
     vol = value / spec.value_per_ul
-    nearest = round(vol)
-    return float(nearest) if abs(vol - nearest) < TOLERANCE else vol
+    steps = (vol - spec.min_ul) / spec.step_ul
+    if abs(steps - round(steps)) < TOLERANCE:
+        return clean(spec.min_ul + round(steps) * spec.step_ul)
+    return vol
+
+
+def snap_value(value: float, spec: FactorSpec) -> float:
+    """The factor value that matches the snapped volume, for example 1.5000001 to 1.5."""
+    return clean(factor_volume(value, spec) * spec.value_per_ul)
 
 
 def allowed_volumes(spec: FactorSpec) -> list[float]:
@@ -112,6 +123,18 @@ def fmt(x: float) -> str:
     return f"{x:g}"
 
 
+def fmt_code(x: float) -> str:
+    """Write a volume into protocol code with no loss of precision."""
+    x = float(x)
+    return str(int(x)) if x.is_integer() else repr(x)
+
+
+def fmt_precise(x: float) -> str:
+    """Format a volume for an error message with enough digits to show small differences."""
+    x = float(x)
+    return str(int(x)) if x.is_integer() else f"{x:.6f}".rstrip("0").rstrip(".")
+
+
 def fmt_ul(x: float) -> str:
     """Format a volume: whole numbers without a decimal point."""
     x = clean(x)
@@ -120,9 +143,20 @@ def fmt_ul(x: float) -> str:
     return f"{x:g}"
 
 
-def condition_key(cond: dict[str, float], factor_order: list[str]) -> tuple:
-    """A hashable key for a condition, for finding duplicates."""
-    return tuple(clean(cond.get(f, float("nan"))) for f in factor_order)
+MISSING = "missing"
+
+
+def condition_key(cond: dict[str, float], factors: dict[str, FactorSpec]) -> tuple:
+    """A hashable key for a condition, for finding duplicates.
+
+    Values are compared by the volume they give, so 2.0 and 2.0000001 match.
+    A factor left out of the condition gets a fixed marker, so two conditions
+    that leave out the same factor still match.
+    """
+    return tuple(
+        round(factor_volume(cond[f], spec), 6) if f in cond else MISSING
+        for f, spec in factors.items()
+    )
 
 
 def sample_wells(assay: Assay, include_controls: bool) -> list[str]:

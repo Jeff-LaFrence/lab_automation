@@ -14,7 +14,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from labauto import labware
-from labauto.config import TOLERANCE, fmt_ul, repo_root
+from labauto.config import TOLERANCE, fmt_precise, repo_root
 from labauto.expand import expand
 from labauto.instruments import get_instrument
 from labauto.models import Assay, CheckResult, Design, Plan, PlanError, SimResult, Workcell
@@ -67,7 +67,7 @@ def ledger_check(plan: Plan, sim: SimResult) -> list[PlanError]:
             errors.append(
                 _mismatch(
                     f"{e.dest_labware}:{e.dest_well}:{e.reagent}",
-                    f"The simulator dispensed {fmt_ul(e.volume_ul)} uL of {e.reagent} into "
+                    f"The simulator dispensed {fmt_precise(e.volume_ul)} uL of {e.reagent} into "
                     f"{e.dest_labware} {e.dest_well}, which is not the plate.",
                     f"{e.dest_labware}:{e.dest_well} unexpected",
                 )
@@ -82,9 +82,9 @@ def ledger_check(plan: Plan, sim: SimResult) -> list[PlanError]:
             errors.append(
                 _mismatch(
                     f"{plan.plate}:{well}:{reagent}",
-                    f"The plan puts {fmt_ul(w)} uL of {reagent} in {well}. "
-                    f"The simulator dispensed {fmt_ul(g)} uL.",
-                    f"{plan.plate}:{well} {reagent} planned {fmt_ul(w)}, dispensed {fmt_ul(g)}",
+                    f"The plan puts {fmt_precise(w)} uL of {reagent} in {well}. "
+                    f"The simulator dispensed {fmt_precise(g)} uL.",
+                    f"{plan.plate}:{well} {reagent} planned {fmt_precise(w)}, dispensed {fmt_precise(g)}",
                 )
             )
     by_reagent: dict[str, float] = defaultdict(float)
@@ -96,9 +96,9 @@ def ledger_check(plan: Plan, sim: SimResult) -> list[PlanError]:
             errors.append(
                 _mismatch(
                     f"total:{reagent}",
-                    f"The plan totals {fmt_ul(w)} uL of {reagent}. "
-                    f"The simulator drew {fmt_ul(g)} uL in all.",
-                    f"total {reagent} planned {fmt_ul(w)}, dispensed {fmt_ul(g)}",
+                    f"The plan totals {fmt_precise(w)} uL of {reagent}. "
+                    f"The simulator drew {fmt_precise(g)} uL in all.",
+                    f"total {reagent} planned {fmt_precise(w)}, dispensed {fmt_precise(g)}",
                 )
             )
     return errors

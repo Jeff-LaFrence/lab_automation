@@ -10,7 +10,7 @@ from __future__ import annotations
 import random
 
 from labauto import labware
-from labauto.config import factor_volume, sample_wells
+from labauto.config import factor_volume, sample_wells, snap_value
 from labauto.models import Assay, Design, Plan, PlanError, PlanWell
 from labauto.validate import design_conditions, validate_design
 
@@ -57,7 +57,7 @@ def control_wells(assay: Assay) -> list[PlanWell]:
         role = "negative_control" if name == "negative" else "reference_control"
         if ctrl.conditions is not None:
             vols = well_volumes(assay, ctrl.conditions)
-            conds = {k: float(v) for k, v in ctrl.conditions.items()}
+            conds = {k: snap_value(v, assay.factors[k]) for k, v in ctrl.conditions.items()}
         else:
             vols = _with_fill(assay, {k: float(v) for k, v in (ctrl.volumes_ul or {}).items()})
             conds = None
@@ -93,7 +93,7 @@ def expand(design: Design, assay: Assay, check: bool = True) -> Plan:
         random.Random(design.layout.seed).shuffle(items)
 
     for well, (ci, rep) in zip(free, items, strict=False):
-        cond = {f: float(conditions[ci][f]) for f in assay.factors}
+        cond = {f: snap_value(conditions[ci][f], spec) for f, spec in assay.factors.items()}
         wells.append(
             PlanWell(
                 well=well,

@@ -40,19 +40,23 @@ DESIGN_ORDER = [
 ]
 PLAN_ORDER = [
     "SCHEMA_INVALID",
+    "EMPTY_PLAN",
     "UNKNOWN_REAGENT",
     "BAD_WELL_NAME",
     "DUPLICATE_WELL",
     "NEGATIVE_VOLUME",
     "WELL_OVERFILL",
     "WELL_TOTAL_MISMATCH",
+    "TOTALS_MISMATCH",
 ]
 WORKCELL_ORDER = [
     "UNKNOWN_INSTRUMENT",
+    "DUPLICATE_NAME",
     "DECK_CONFLICT",
     "BAD_SLOT",
     "UNKNOWN_LABWARE",
     "MISSING_INVENTORY",
+    "SOURCE_CONFLICT",
     "SOURCE_OVER_CAPACITY",
     "SOURCE_SHORT",
     "VOLUME_OUT_OF_RANGE",
@@ -202,11 +206,11 @@ def validate_design(design: Design, assay: Assay) -> list[PlanError]:
                 continue
             if not values:
                 errors.append(_empty(f"grid.{key}", f"The grid lists no values for {key}."))
-            seen: dict[float, int] = {}
+            seen: dict[tuple, int] = {}
             for i, v in enumerate(values):
                 where = f"grid.{key}[{i}]"
                 errors.extend(_check_value(key, v, assay.factors[key], where))
-                k = round(float(v), 9)
+                k = condition_key({key: v}, {key: assay.factors[key]})
                 if k in seen:
                     errors.append(
                         PlanError(
@@ -228,8 +232,9 @@ def validate_design(design: Design, assay: Assay) -> list[PlanError]:
         for f in factors:
             if f not in design.grid:
                 errors.append(_missing_factor(f, "grid", assay))
-        if design.grid and all(design.grid.values()):
-            n_conditions = math.prod(len(v) for v in design.grid.values())
+        known = [v for k, v in design.grid.items() if k in assay.factors]
+        if known and all(known):
+            n_conditions = math.prod(len(v) for v in known)
     elif design.conditions is not None:
         if not design.conditions:
             errors.append(_empty("conditions", "The conditions list is empty."))
@@ -245,7 +250,7 @@ def validate_design(design: Design, assay: Assay) -> list[PlanError]:
                     errors.extend(
                         _check_value(f, cond[f], assay.factors[f], f"conditions[{i}].{f}")
                     )
-            key = condition_key(cond, factors)
+            key = condition_key(cond, assay.factors)
             if key in first_seen:
                 text = ", ".join(f"{f}={fmt(cond[f])}" for f in factors if f in cond)
                 errors.append(
@@ -352,6 +357,34 @@ def validate_plan(plan: Plan, assay: Assay) -> list[PlanError]:
     capacity = spec.capacity_ul if spec else float("inf")
     limit = min(assay.max_well_volume_ul, capacity)
     fill = [r for r, s in assay.reagents.items() if s.role == "fill"]
+    if plan.assay_id != assay.assay_id:
+        errors.append(
+            PlanError(
+                code="SCHEMA_INVALID",
+                layer="plan",
+                where="assay_id",
+                message=(
+                    f"The plan was written for assay '{plan.assay_id}', "
+                    f"but the assay loaded is '{assay.assay_id}'."
+                ),
+                fix_hint="Check the plan against the assay it was written for.",
+                options=["fix_format"],
+                needs_human=True,
+                short=f"assay_id {plan.assay_id}",
+            )
+        )
+    if not plan.wells:
+        errors.append(
+            PlanError(
+                code="EMPTY_PLAN",
+                layer="plan",
+                where="wells",
+                message="The plan lists no wells, so there is nothing to run.",
+                fix_hint="Add at least one well, or start from a design.",
+                options=["add_wells"],
+                short="no wells",
+            )
+        )
     seen: set[str] = set()
     for w in plan.wells:
         place = f"{plan.plate}:{w.well}"
@@ -394,23 +427,32 @@ def validate_plan(plan: Plan, assay: Assay) -> list[PlanError]:
             )
         seen.add(w.well)
         others = sum(v for r, v in w.add_ul.items() if r not in fill)
+        target = assay.total_volume_ul
         for reagent, vol in w.add_ul.items():
             if vol < 0:
-                if reagent in fill:
+                if reagent in fill and others > target + TOLERANCE:
                     text = (
-                        f"The {reagent} fill in {w.well} would be {fmt_ul(vol)} uL: the other "
-                        f"additions already total {fmt_ul(others)} uL, above the "
-                        f"{fmt_ul(assay.total_volume_ul)} uL target."
+                        f"The {reagent} fill in {w.well} is {fmt_ul(vol)} uL because the other "
+                        f"additions total {fmt_ul(others)} uL, above the {fmt_ul(target)} uL target."
                     )
+                    hint = "Lower the other additions so they fit inside the well total."
+                elif reagent in fill:
+                    text = (
+                        f"The {reagent} fill in {w.well} is {fmt_ul(vol)} uL. The other additions "
+                        f"total {fmt_ul(others)} uL against a {fmt_ul(target)} uL target, so the "
+                        f"fill should be {fmt_ul(target - others)} uL."
+                    )
+                    hint = f"Set the {reagent} fill to {fmt_ul(target - others)} uL."
                 else:
                     text = f"Well {w.well} adds {fmt_ul(vol)} uL of {reagent}."
+                    hint = f"Use a {reagent} volume of zero or more."
                 errors.append(
                     PlanError(
                         code="NEGATIVE_VOLUME",
                         layer="plan",
                         where=f"{place}:{reagent}",
                         message=text + " Volumes cannot be below zero.",
-                        fix_hint="Lower the other additions so the well total fits.",
+                        fix_hint=hint,
                         options=["lower_values"],
                         short=f"{place} {reagent} {fmt_ul(vol)} uL",
                     )
@@ -445,6 +487,27 @@ def validate_plan(plan: Plan, assay: Assay) -> list[PlanError]:
                     fix_hint="Adjust the fill so the total matches.",
                     options=["fix_fill"],
                     short=f"{place} {fmt_ul(total)} uL, expected {fmt_ul(assay.total_volume_ul)}",
+                )
+            )
+    sums: dict[str, float] = {}
+    for w in plan.wells:
+        for r, v in w.add_ul.items():
+            sums[r] = sums.get(r, 0.0) + v
+    for reagent in sorted(set(sums) | set(plan.totals_ul)):
+        listed, actual = plan.totals_ul.get(reagent, 0.0), sums.get(reagent, 0.0)
+        if abs(listed - actual) > TOLERANCE:
+            errors.append(
+                PlanError(
+                    code="TOTALS_MISMATCH",
+                    layer="plan",
+                    where=f"totals_ul:{reagent}",
+                    message=(
+                        f"totals_ul lists {fmt_ul(listed)} uL of {reagent}, "
+                        f"but the wells add up to {fmt_ul(actual)} uL."
+                    ),
+                    fix_hint="Recompute totals_ul from the wells, or leave it out and code will add it.",
+                    options=["fix_totals"],
+                    short=f"{reagent} listed {fmt_ul(listed)}, wells {fmt_ul(actual)}",
                 )
             )
     return _ordered(errors, PLAN_ORDER)
@@ -502,6 +565,25 @@ def validate_worklist(
                 )
             )
 
+    for kind, names in (
+        ("deck entry name", [e.name for e in workcell.deck]),
+        ("pipette name", [p.name for p in workcell.pipettes]),
+        ("pipette mount", [p.mount for p in workcell.pipettes]),
+    ):
+        for name in sorted({n for n in names if names.count(n) > 1}):
+            errors.append(
+                PlanError(
+                    code="DUPLICATE_NAME",
+                    layer="workcell",
+                    where=f"{kind.split()[0]}:{name}",
+                    message=f"The {kind} '{name}' is used {names.count(name)} times in the workcell.",
+                    fix_hint="Give each one its own name in the workcell file.",
+                    options=["ask_human_to_fix_workcell"],
+                    needs_human=True,
+                    short=f"{kind} {name}",
+                )
+            )
+
     lmap = inst.labware_map()
     for entry in workcell.deck:
         if not inst.valid_position(entry.position):
@@ -537,12 +619,47 @@ def validate_worklist(
                     f"pipette:{pip.name}", f"tip rack '{pip.tips}' (not on the deck)", inst.name
                 )
             )
-    if workcell.deck_entry(plan.plate) is None:
+    plate_entry = workcell.deck_entry(plan.plate)
+    if plate_entry is None:
         errors.append(
             _unknown_labware(
                 f"plate:{plan.plate}", f"plate '{plan.plate}' (not on the deck)", inst.name
             )
         )
+    elif assay is not None and plate_entry.labware != assay.plate_labware:
+        errors.append(
+            PlanError(
+                code="UNKNOWN_LABWARE",
+                layer="workcell",
+                where=f"plate:{plan.plate}",
+                message=(
+                    f"The plan dispenses into '{plan.plate}', which is {plate_entry.labware} on "
+                    f"this deck. The assay runs on {assay.plate_labware}."
+                ),
+                fix_hint="Point the plan at the assay plate, or fix the workcell file.",
+                options=["ask_human_to_fix_workcell"],
+                needs_human=True,
+                short=f"plate:{plan.plate} is {plate_entry.labware}",
+            )
+        )
+
+    by_source: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for reagent, inv in workcell.inventory.items():
+        by_source[(inv.labware, inv.well)].append(reagent)
+    for (lw, well), reagents in by_source.items():
+        if len(reagents) > 1:
+            errors.append(
+                PlanError(
+                    code="SOURCE_CONFLICT",
+                    layer="workcell",
+                    where=f"source:{lw}:{well}",
+                    message=f"{', '.join(reagents)} are all listed in {lw} {well}. Each source well holds one reagent.",
+                    fix_hint="Give each reagent its own source well in the workcell file.",
+                    options=["ask_human_to_fix_workcell"],
+                    needs_human=True,
+                    short=f"{lw}:{well} {', '.join(reagents)}",
+                )
+            )
 
     drawn: dict[str, float] = defaultdict(float)
     for row in worklist.rows:
@@ -664,7 +781,9 @@ def validate_worklist(
     for rack, need in needed_tips.items():
         entry = workcell.deck_entry(rack)
         spec = labware.get(entry.labware) if entry else None
-        have = spec.count if spec else 0
+        if spec is None:
+            continue  # already reported as UNKNOWN_LABWARE
+        have = spec.count
         if need > have:
             errors.append(
                 PlanError(

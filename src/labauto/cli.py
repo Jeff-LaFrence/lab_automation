@@ -39,9 +39,20 @@ def check_data(data: object, assay: Assay, workcell: Workcell, out_dir: Path) ->
             errors=errors,
             input_kind=kind,
             instrument=workcell.instrument,
-            layer_status={layer: "fail"},
+            layer_status={"design": "not applicable", "plan": "fail"}
+            if layer == "plan"
+            else {"design": "fail"},
         )
     return check(item, assay, workcell, out_dir=out_dir)
+
+
+def input_label(path: str | Path) -> str:
+    """How the input file is named in run records: relative to here, never a home path."""
+    p = Path(path).resolve()
+    try:
+        return str(p.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return p.name
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -50,7 +61,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     data = load_json(args.file)
     run_dir = new_run_dir(args.runs)
     result = check_data(data, assay, workcell, run_dir)
-    summary = write_run(run_dir, result, assay, workcell, str(args.file), data)
+    summary = write_run(run_dir, result, assay, workcell, input_label(args.file), data)
     print(f"{result_title(result)}    run folder: {run_dir}")
     for e in result.errors:
         print(f"  {e.code} at {e.where}: {e.message}")

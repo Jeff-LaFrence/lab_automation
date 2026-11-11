@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, Strict, model_validator
 
 
 def _volume_out(value: float) -> float | int:
@@ -16,7 +16,17 @@ def _volume_out(value: float) -> float | int:
     return int(value) if float(value).is_integer() else value
 
 
-Volume = Annotated[float, PlainSerializer(_volume_out, return_type=Any)]
+Volume = Annotated[float, Field(allow_inf_nan=False), PlainSerializer(_volume_out, return_type=Any)]
+
+# A factor value written in a design: a finite number. true, "2" and NaN are refused.
+FactorValue = Annotated[float, Strict(), Field(allow_inf_nan=False)]
+
+
+class Strict_(BaseModel):
+    """Base for models read from files people or models write: unknown fields are errors."""
+
+    model_config = ConfigDict(extra="forbid")
+
 
 Layer = Literal["design", "plan", "workcell", "simulator", "ledger", "qc"]
 
@@ -110,7 +120,7 @@ class InventoryEntry(BaseModel):
 
     labware: str
     well: str
-    volume_ul: Volume
+    volume_ul: Annotated[Volume, Field(ge=0)]
 
 
 class LiquidHandling(BaseModel):
@@ -128,7 +138,7 @@ class Workcell(BaseModel):
     pipettes: list[PipetteSpec]
     liquid_handling: LiquidHandling
     inventory: dict[str, InventoryEntry]
-    dead_volume_fraction: float = 0.0
+    dead_volume_fraction: float = Field(default=0.0, ge=0.0, lt=1.0)
 
     def deck_entry(self, name: str) -> DeckEntry | None:
         """Find a deck entry by its neutral name."""
@@ -148,7 +158,7 @@ class Workcell(BaseModel):
 # ---------------------------------------------------------------- design
 
 
-class Deviation(BaseModel):
+class Deviation(Strict_):
     """A declared difference between what was asked and what is planned."""
 
     requested: str
@@ -156,7 +166,7 @@ class Deviation(BaseModel):
     reason: str
 
 
-class CreatedBy(BaseModel):
+class CreatedBy(Strict_):
     """Who or what wrote a design."""
 
     role: Literal["person", "model", "optimizer", "random", "code"] = "person"
@@ -164,7 +174,7 @@ class CreatedBy(BaseModel):
     rung: str | None = None
 
 
-class Layout(BaseModel):
+class Layout(Strict_):
     """How samples are placed in wells: a seeded shuffle, or in column order."""
 
     strategy: Literal["randomized", "by_column"] = "randomized"
@@ -184,8 +194,8 @@ class Design(BaseModel):
     assay_id: str = ""
     workcell_id: str = ""
     title: str = ""
-    grid: dict[str, list[float]] | None = None
-    conditions: list[dict[str, float]] | None = None
+    grid: dict[str, list[FactorValue]] | None = None
+    conditions: list[dict[str, FactorValue]] | None = None
     replicates: int = 3
     include_controls: bool = True
     layout: Layout = Field(default_factory=Layout)
@@ -204,7 +214,7 @@ class Design(BaseModel):
 # ---------------------------------------------------------------- plan
 
 
-class PlanWell(BaseModel):
+class PlanWell(Strict_):
     """What goes into one well, in microliters per reagent."""
 
     well: str
@@ -230,6 +240,17 @@ class Plan(BaseModel):
     plate: str = "plate"
     wells: list[PlanWell]
     totals_ul: dict[str, Volume] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _fill_totals(self) -> Plan:
+        """A plan written by hand may leave totals_ul out. Code adds it from the wells."""
+        if not self.totals_ul:
+            totals: dict[str, float] = {}
+            for w in self.wells:
+                for r, v in w.add_ul.items():
+                    totals[r] = totals.get(r, 0.0) + v
+            self.totals_ul = totals
+        return self
 
 
 # ---------------------------------------------------------------- worklist
