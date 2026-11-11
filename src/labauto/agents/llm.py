@@ -229,11 +229,14 @@ def chat(
     role: str = "planner",
     meta: dict | None = None,
     max_calls: int = 2,
+    text_only: bool = False,
 ) -> ChatResult:
     """Ask for one JSON object. Retries once with the parse error appended.
 
     A second failure returns a ChatResult with parsed None and an error that
     starts with SCHEMA_INVALID. max_calls caps the calls (1 means no retry).
+    With text_only, the reply is plain text: parsed is {"text": ...} with any
+    reasoning removed, and an empty reply counts as a failure.
     """
     meta = dict(meta or {})
     json_schema = schema.model_json_schema() if schema is not None else None
@@ -255,7 +258,11 @@ def chat(
             raw = client.complete(label, convo, json_schema, temperature, max_tokens)
             seconds = round(time.perf_counter() - start, 3)
             total.fresh_calls += 1
-        parsed, error = parse_reply(raw.text, schema)
+        if text_only:
+            body = strip_thinking(raw.text).strip()
+            parsed, error = ({"text": body}, None) if body else (None, "the reply was empty")
+        else:
+            parsed, error = parse_reply(raw.text, schema)
         if recorded is None and transcript is not None:
             transcript.append(
                 {

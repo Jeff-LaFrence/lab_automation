@@ -24,6 +24,7 @@ from labauto.models import Assay, Decision, History, Pick
 
 MAX_SUGGEST = 16
 MAX_PREDICT = 10
+NO_MODEL = "no model yet: fewer than 2 conditions have valid measurements"
 
 
 class Optimizer:
@@ -60,10 +61,21 @@ class Optimizer:
         return self.gp.predict(unit_scale(conds, self.assay), return_std=True)
 
     def suggest(self, n: int) -> list[dict]:
-        """Up to 16 untested conditions by Thompson sampling, with predicted mean and sd."""
-        n = max(1, min(int(n), MAX_SUGGEST, len(self.candidates)))
+        """Up to 16 untested conditions by Thompson sampling, with predicted mean and sd.
+
+        With fewer than 2 measured conditions there is no model yet: the picks
+        come from a Latin hypercube over untested conditions, with no prediction.
+        """
+        n = min(int(n), MAX_SUGGEST, len(self.candidates))
+        if n <= 0:
+            return []
         if self.gp is None:
-            picks = latin_hypercube(self.assay, n, self.seed)
+            done = {key(c, self.names) for c in self._tested()}
+            picks = latin_hypercube(self.assay, n, self.seed, exclude=done)
+            return [
+                {"conditions": c, "predicted_mean": None, "predicted_sd": None, "note": NO_MODEL}
+                for c in picks
+            ]
         else:
             x = unit_scale(self.candidates, self.assay)
             samples = self.gp.sample_y(x, n_samples=n, random_state=self.seed)
@@ -84,9 +96,17 @@ class Optimizer:
             for c, m, s in zip(picks, mean, sd, strict=True)
         ]
 
+    def _tested(self) -> list[dict[str, float]]:
+        return [s.conditions for s in self.history.stats if s.n > 0]
+
     def predict(self, conditions: list[dict[str, float]]) -> list[dict]:
         """Predicted mean and sd for up to 10 conditions."""
         conds = list(conditions)[:MAX_PREDICT]
+        if self.gp is None:
+            return [
+                {"conditions": c, "predicted_mean": None, "predicted_sd": None, "note": NO_MODEL}
+                for c in conds
+            ]
         mean, sd = self._predict(conds)
         return [
             {
@@ -134,7 +154,11 @@ class OptimizerDecider:
             Pick(
                 conditions=s["conditions"],
                 source="optimizer",
-                reason=f"Thompson sample; predicted {s['predicted_mean']:.1f} +/- {s['predicted_sd']:.1f}",
+                reason=(
+                    f"Thompson sample; predicted {s['predicted_mean']:.1f} +/- {s['predicted_sd']:.1f}"
+                    if s["predicted_mean"] is not None
+                    else "Latin hypercube: too little valid data for the model"
+                ),
             )
             for s in opt.suggest(n)
         ]
@@ -151,14 +175,14 @@ def round_seed(seed: int, round_number: int) -> int:
     return seed * 1000 + round_number
 
 
-def round_one(assay: Assay, n: int, seed: int, strategy: str) -> Decision:
+def round_one(assay: Assay, n: int, seed: int) -> Decision:
     """The shared round 1 design: a Latin hypercube, the same for every strategy."""
     picks = [
         Pick(conditions=c, source="lhs", reason="shared round 1 Latin hypercube")
         for c in latin_hypercube(assay, n, seed)
     ]
     return Decision(
-        round=1, strategy=strategy, picks=picks, round_note="Round 1 is a shared Latin hypercube."
+        round=1, strategy="lhs", picks=picks, round_note="Round 1 is a shared Latin hypercube."
     )
 
 

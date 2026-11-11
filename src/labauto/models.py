@@ -537,9 +537,9 @@ class CampaignConfig(BaseModel):
     assay_id: str
     workcell_id: str
     strategy: Literal["random", "optimizer", "model"]
-    rounds: int = 6
-    conditions_per_round: int = 8
-    replicates: int = 3
+    rounds: int = Field(default=6, ge=1)
+    conditions_per_round: int = Field(default=8, ge=1)
+    replicates: int = Field(default=3, ge=1)
     seed: int = 1
     surface_seed: int = 0
     approval_policy: Literal["always", "envelope", "auto_demo"] = "always"
@@ -547,6 +547,19 @@ class CampaignConfig(BaseModel):
     assay: str = ""
     workcell: str = ""
     client: str = ""
+
+    @model_validator(mode="after")
+    def _known_faults(self) -> CampaignConfig:
+        for f in self.faults:
+            name, _, at = f.partition("@")
+            if f == "injection_failure":
+                continue
+            if name == "plate_drift" and at.isdigit() and 1 <= int(at) <= self.rounds:
+                continue
+            raise ValueError(
+                f"unknown fault '{f}': use injection_failure or plate_drift@R with R from 1 to {self.rounds}"
+            )
+        return self
 
 
 class Envelope(BaseModel):
@@ -558,6 +571,8 @@ class Envelope(BaseModel):
     approved_by: str
     approved_at: str
     approval_ref: str
+    assay_sha256: str = ""
+    workcell_sha256: str = ""
     max_auto_rounds: int = 5
     auto_rounds_used: int = 0
 

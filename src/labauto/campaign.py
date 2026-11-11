@@ -46,7 +46,15 @@ from labauto.models import (
     QcReport,
 )
 from labauto.pipeline import check, design_hash, file_hash
-from labauto.record import render_summary, utc_now, utc_stamp, write_check_files, write_json
+from labauto.record import (
+    check_record,
+    display_path,
+    render_summary,
+    utc_now,
+    utc_stamp,
+    write_check_files,
+    write_json,
+)
 from labauto.store import LocalStore
 from labauto.virtual.ground_truth import reference_expected, surface_for
 from labauto.virtual.lcms import load_peaks
@@ -92,6 +100,8 @@ def step(
         }
     )
     st.state, st.round_state = state, round_state
+    if state in ("RUNNING", "DONE"):
+        st.needs_human = None
     save_cstate(cdir, st)
 
 
@@ -207,7 +217,7 @@ def _run(cdir: Path, cfg: CampaignConfig, st: CampaignState, clients, settings) 
             else:
                 history = build_history(store.load_results(cfg.campaign_id), assay, r)
                 if r == 1:
-                    decision = round_one(assay, cfg.conditions_per_round, cfg.seed, cfg.strategy)
+                    decision = round_one(assay, cfg.conditions_per_round, cfg.seed)
                 else:
                     decider = _decider(cfg, assay, clients, rdir)
                     decision = decider.decide(
@@ -227,6 +237,10 @@ def _run(cdir: Path, cfg: CampaignConfig, st: CampaignState, clients, settings) 
             decision = Decision.model_validate_json(
                 (rdir / "decision.json").read_text(encoding="utf-8")
             )
+            if decision.fallback and decision.fallback.startswith("pipeline failure"):
+                st.anomalies[str(r)] = (
+                    decision.fallback
+                )  # kept even if a crash came before it was saved
             result = _check_round(rdir, decision, cfg, assay, workcell, r)
             if not result.ok and cfg.strategy == "model" and not decision.fallback:
                 failed = rdir / "failed_check"
@@ -248,7 +262,8 @@ def _run(cdir: Path, cfg: CampaignConfig, st: CampaignState, clients, settings) 
                 decision.strategy = "model"
                 decision.fallback = f"pipeline failure ({codes}); used the optimizer's picks"
                 write_json(rdir / "decision.json", decision)
-                st.anomalies[str(r)] = f"pipeline failure: {codes}"
+                st.anomalies[str(r)] = decision.fallback
+                save_cstate(cdir, st)
                 result = _check_round(rdir, decision, cfg, assay, workcell, r)
             if not result.ok:
                 codes = ", ".join(sorted({e.code for e in result.errors}))
@@ -260,7 +275,11 @@ def _run(cdir: Path, cfg: CampaignConfig, st: CampaignState, clients, settings) 
             step(cdir, st, "APPROVAL", f"round {r}: every check passed")
 
         if st.round_state == "APPROVAL":
-            person, why = _needs_person(cdir, cfg, st, r)
+            existing = load_round_approval(rdir)
+            if existing and existing.decision == "approved" and verify_round(cdir, r):
+                step(cdir, st, "EXECUTING", f"round {r} already approved ({existing.mode})")
+                continue
+            person, why = _needs_person(cdir, cfg, st, r, assay, workcell)
             if person and cfg.approval_policy != "auto_demo":
                 step(cdir, st, "APPROVAL", f"round {r} needs a person: {why}", "AWAITING_APPROVAL")
                 _round_summary(cdir, rdir, cfg, r)
@@ -269,6 +288,8 @@ def _run(cdir: Path, cfg: CampaignConfig, st: CampaignState, clients, settings) 
                 _approve(cdir, r, "demo_auto", "demo_auto", f"stands in for a person: {why}")
             else:
                 env = load_envelope(cdir)
+                env.auto_rounds_used += 1
+                write_json(cdir / "envelope.json", env)
                 _approve(
                     cdir,
                     r,
@@ -277,8 +298,6 @@ def _run(cdir: Path, cfg: CampaignConfig, st: CampaignState, clients, settings) 
                     "inside the approval envelope",
                     envelope_ref=f"envelope.json (from {env.approval_ref})",
                 )
-                env.auto_rounds_used += 1
-                write_json(cdir / "envelope.json", env)
             step(cdir, st, "EXECUTING", f"round {r} approved")
 
         if st.round_state == "EXECUTING":
@@ -339,9 +358,14 @@ def _run(cdir: Path, cfg: CampaignConfig, st: CampaignState, clients, settings) 
             )
             write_rows(rdir / "results.csv", rows)
             write_json(rdir / "qc.json", qc)
-            if r not in st.appended_rounds:
+            already = any(
+                str(x.get("round")) == str(r) for x in store.load_results(cfg.campaign_id)
+            )
+            if not already:
                 store.append_results(cfg.campaign_id, rows)
+            if r not in st.appended_rounds:
                 st.appended_rounds.append(r)
+                save_cstate(cdir, st)
             if not qc.plate_ok:
                 st.anomalies[str(r)] = "PLATE_QC_FAIL"
             _round_summary(cdir, rdir, cfg, r)
@@ -354,9 +378,10 @@ def _run(cdir: Path, cfg: CampaignConfig, st: CampaignState, clients, settings) 
             )
 
     step(cdir, st, "DONE", f"{cfg.rounds} rounds complete", "DONE")
-    from labauto.report import build_report
+    from labauto.report import build_report, model_note_writer
 
-    build_report(cdir)
+    live = clients is not None and getattr(clients, "spec", "") == "live"
+    build_report(cdir, note_writer=model_note_writer(clients, cdir) if live else None)
 
 
 def _check_round(
@@ -367,14 +392,22 @@ def _check_round(
     )
     result = check(design, assay, workcell, out_dir=rdir)
     write_check_files(rdir, result, assay)
-    write_json(rdir / "check.json", result)
+    write_json(rdir / "check.json", check_record(result))
     return result
 
 
 # ---------------------------------------------------------------- approval
 
 
-def _needs_person(cdir: Path, cfg: CampaignConfig, st: CampaignState, r: int) -> tuple[bool, str]:
+def _file_sha(path: str) -> str:
+    from labauto.config import resolve
+
+    return file_hash(resolve(path))
+
+
+def _needs_person(
+    cdir: Path, cfg: CampaignConfig, st: CampaignState, r: int, assay=None, workcell=None
+) -> tuple[bool, str]:
     if cfg.approval_policy == "always":
         return True, "policy is always"
     if cfg.approval_policy == "auto_demo":
@@ -384,8 +417,16 @@ def _needs_person(cdir: Path, cfg: CampaignConfig, st: CampaignState, r: int) ->
         return True, "no approval envelope yet (round 1 is approved by a person)"
     res = load_round_check(round_dir(cdir, r))
     wells = len(res.plan.wells) if res and res.plan else 0
-    if env.assay_id != cfg.assay_id or env.workcell_id != cfg.workcell_id:
-        return True, "assay or workcell differs from the envelope"
+    # Compare what this round will really run with what the person approved:
+    # the ids in the round's own design, and the content of the files behind them.
+    running_assay = res.design.assay_id if res and res.design else None
+    running_workcell = res.design.workcell_id if res and res.design else None
+    if env.assay_id != running_assay or env.workcell_id != running_workcell:
+        return True, "the assay or workcell this round runs on differs from the envelope"
+    if env.assay_sha256 and env.assay_sha256 != _file_sha(cfg.assay):
+        return True, "the assay file changed since the envelope was approved"
+    if env.workcell_sha256 and env.workcell_sha256 != _file_sha(cfg.workcell):
+        return True, "the workcell file changed since the envelope was approved"
     if wells > env.wells_approved:
         return True, f"{wells} wells is more than the {env.wells_approved} approved"
     if res is None or not res.ok:
@@ -443,8 +484,10 @@ def approve_waiting_round(cdir: Path, by: str | None = None, comment: str = "") 
     approval = _approve(cdir, r, "human", by or "unnamed person", comment)
     if cfg.approval_policy == "envelope" and load_envelope(cdir) is None:
         env = Envelope(
-            assay_id=cfg.assay_id,
-            workcell_id=cfg.workcell_id,
+            assay_id=res.design.assay_id,
+            workcell_id=res.design.workcell_id,
+            assay_sha256=_file_sha(cfg.assay),
+            workcell_sha256=_file_sha(cfg.workcell),
             wells_approved=len(res.plan.wells),
             approved_by=approval.by,
             approved_at=approval.at,
@@ -482,12 +525,12 @@ def _round_summary(cdir: Path, rdir: Path, cfg: CampaignConfig, r: int) -> None:
     out += [
         "## Decision",
         "",
-        f"- strategy: {decision.strategy}" + (f" ({decision.model})" if decision.model else ""),
+        "- decided by: " + decided_by_text(decision),
     ]
     if decision.fallback:
         out.append(f"- fallback: {decision.fallback}")
     if decision.round_note:
-        out.append(f"- round note (model written): {decision.round_note}")
+        out.append(f"- round note ({note_source(decision)}): {decision.round_note}")
     out.append(f"- tool calls: {len(decision.tool_calls)}")
     out.append("")
     if approval:
@@ -503,16 +546,23 @@ def _round_summary(cdir: Path, rdir: Path, cfg: CampaignConfig, r: int) -> None:
             out.append(f"- envelope: {approval.envelope_ref}")
         out.append("")
     elif st.state == "AWAITING_APPROVAL" and st.round == r:
+        where = display_path(cdir)
         out += [
             "## Approval",
             "",
-            f"Waiting for a person: `labauto approve {cdir}`, then `labauto resume {cdir}`.",
+            f"Waiting for a person: `labauto approve {where}`, then `labauto resume {where}`.",
             "",
         ]
     qc_path = rdir / "qc.json"
     if qc_path.exists():
         qc = QcReport.model_validate_json(qc_path.read_text(encoding="utf-8"))
-        out += ["## Quality checks", "", f"- plate: {'passed' if qc.plate_ok else 'FAILED'}"]
+        out += [
+            "## Quality checks",
+            "",
+            "The readings are synthetic: a simulated LC/MS reading a made up yield surface.",
+            "",
+            f"- plate: {'passed' if qc.plate_ok else 'FAILED'}",
+        ]
         if qc.negative_mean is not None:
             out.append(
                 f"- negative control mean {qc.negative_mean:.1f}% (limit below {qc.negative_limit:g}%)"
@@ -533,6 +583,30 @@ def _round_summary(cdir: Path, rdir: Path, cfg: CampaignConfig, r: int) -> None:
         )
         out += body.split("\n", 2)[2].splitlines()
     (rdir / "summary.md").write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
+
+
+def is_scripted(decision: Decision) -> bool:
+    return (decision.model or "") == "scripted"
+
+
+def decided_by_text(decision: Decision) -> str:
+    """Who picked a round's conditions, in words that never pass code or a script off as a model."""
+    if decision.strategy == "lhs":
+        return "shared Latin hypercube (code)"
+    if decision.strategy == "model":
+        who = (
+            "scripted client (hand-written replies, not a model)"
+            if is_scripted(decision)
+            else f"model {decision.model or 'unknown'}"
+        )
+        return who + (f"; fallback: {decision.fallback}" if decision.fallback else "")
+    return f"{decision.strategy} (code)"
+
+
+def note_source(decision: Decision) -> str:
+    if decision.strategy != "model":
+        return "written by code"
+    return "scripted, not a model" if is_scripted(decision) else "model written"
 
 
 def campaign_status(cdir: Path) -> str:

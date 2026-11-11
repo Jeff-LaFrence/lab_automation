@@ -41,6 +41,7 @@ def fast_campaign(
     replicates: int = 3,
     faults: list[str] | None = None,
     surface_seed: int | None = None,
+    stats: dict | None = None,
 ) -> list[float]:
     """Run one campaign on the fast path. Returns the true yield of each round's recommendation.
 
@@ -53,9 +54,11 @@ def fast_campaign(
     expected = reference_expected(assay, sseed)
     rows: list[dict] = []
     scores = []
+    fallbacks = 0
     for r in range(1, rounds + 1):
         history = build_history(rows, assay, r)
-        decision = round_one(assay, n, seed, strategy) if r == 1 else decide(history, n, seed)
+        decision = round_one(assay, n, seed) if r == 1 else decide(history, n, seed)
+        fallbacks += 1 if decision.fallback else 0
         design = design_for_round(
             decision, assay, "fast_path", f"bench-{strategy}-{seed}", r, replicates, seed
         )
@@ -77,6 +80,9 @@ def fast_campaign(
         )
         rec = recommendation(build_history(rows, assay, r + 1))
         scores.append(true_yield(rec["conditions"], surface) if rec else 0.0)
+    if stats is not None:
+        stats["fallbacks"] = stats.get("fallbacks", 0) + fallbacks
+        stats["decided"] = stats.get("decided", 0) + rounds - 1
     return scores
 
 
@@ -114,9 +120,11 @@ def run_benchmark(
         "optimum": {},
         "seconds": {},
         "skipped": {},
+        "fallbacks": {},
         "surface_seed": surface_seed,
     }
-    for seed in range(1, seeds + 1):
+    model_count = max(3, model_seeds) if "model" in strategies and model_factory is not None else 0
+    for seed in range(1, max(seeds, model_count) + 1):
         out["optimum"][seed] = grid_optimum(
             assay, surface_for(seed if surface_seed is None else surface_seed)
         )[0]
@@ -128,13 +136,15 @@ def run_benchmark(
         count = max(3, model_seeds) if strategy == "model" else seeds
         start = time.perf_counter()
         out["scores"][strategy] = {}
+        stats: dict = {}
         for seed in range(1, count + 1):
             out["scores"][strategy][seed] = fast_campaign(
-                assay, decide, strategy, seed, rounds, surface_seed=surface_seed
+                assay, decide, strategy, seed, rounds, surface_seed=surface_seed, stats=stats
             )
             if progress:
                 progress(f"{strategy} seed {seed}: {out['scores'][strategy][seed][-1]:.1f}")
         out["seconds"][strategy] = round(time.perf_counter() - start, 1)
+        out["fallbacks"][strategy] = (stats.get("fallbacks", 0), stats.get("decided", 0))
     return out
 
 
@@ -179,7 +189,8 @@ def write_outputs(
     lines = [
         "# Closed loop benchmark",
         "",
-        "Question: how many rounds does each strategy need to recommend a near optimal condition?",
+        "Question: how many rounds does each strategy need to recommend a near optimal condition? "
+        "The surfaces and the LC/MS readings are synthetic.",
         "",
         "After each round, the recommendation is the tested condition with the highest measured mean. "
         "It is scored by its true yield on the noise free surface. "
@@ -216,13 +227,27 @@ def write_outputs(
         )
     lines += [
         "",
-        f"Mean true optimum over the {len(seeds_in_plot)} surfaces: {mean_opt:.1f}%.",
+        (
+            f"Mean true optimum over the {len(seeds_in_plot)} surfaces: {mean_opt:.1f}%."
+            if result.get("surface_seed") is None
+            else f"True optimum of surface seed {result['surface_seed']}: {mean_opt:.1f}%."
+        ),
         "",
-        "![Benchmark](img/benchmark.png)",
+        f"![Benchmark]({os.path.relpath(png_path, md_path.parent)})",
         "",
     ]
     for strategy, why in result["skipped"].items():
         lines.append(f"- {strategy}: not run, {why}.")
+    for strategy, (fell, decided) in result.get("fallbacks", {}).items():
+        if strategy == "model":
+            lines.append(
+                f"- model: {fell} of {decided} decided rounds fell back to the optimizer's picks"
+                + (
+                    "; the model row then shows the optimizer, not the model."
+                    if decided and fell == decided
+                    else "."
+                )
+            )
     for strategy, secs in result["seconds"].items():
         lines.append(f"- {strategy}: {secs:.0f} s for {table[strategy]['seeds']} seeds.")
     lines += [

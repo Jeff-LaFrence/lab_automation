@@ -59,12 +59,21 @@ def unit_scale(conds: list[dict[str, float]], assay: Assay) -> np.ndarray:
     return np.array(cols, dtype=float).T
 
 
-def latin_hypercube(assay: Assay, n: int, seed: int) -> list[dict[str, float]]:
+def latin_hypercube(
+    assay: Assay, n: int, seed: int, exclude: set[tuple] | None = None
+) -> list[dict[str, float]]:
     """A seeded Latin hypercube over the grid, shared by every strategy for round 1.
 
     Each factor's levels are split into n bins, one level is drawn per bin,
-    and each factor's picks are shuffled on their own.
+    and each factor's picks are shuffled on their own. Conditions in exclude
+    are skipped. n is cut to the number of conditions available.
     """
+    names = list(assay.factors)
+    exclude = exclude or set()
+    pool = [c for c in grid_conditions(assay) if key(c, names) not in exclude]
+    n = min(int(n), len(pool))
+    if n <= 0:
+        return []
     rng = random.Random(seed)
     columns = {}
     for f, spec in assay.factors.items():
@@ -77,12 +86,12 @@ def latin_hypercube(assay: Assay, n: int, seed: int) -> list[dict[str, float]]:
         rng.shuffle(picks)
         columns[f] = picks
     conds = [{f: columns[f][i] for f in assay.factors} for i in range(n)]
-    seen, out = set(), []
-    names = list(assay.factors)
-    pool = grid_conditions(assay)
+    seen: set[tuple] = set()
+    out = []
     for c in conds:
-        while key(c, names) in seen:
-            c = rng.choice(pool)
+        if key(c, names) in seen or key(c, names) in exclude:
+            left = [p for p in pool if key(p, names) not in seen]
+            c = rng.choice(left)
         seen.add(key(c, names))
         out.append(c)
     return out

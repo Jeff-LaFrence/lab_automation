@@ -40,26 +40,39 @@ def cmd_loop(args: argparse.Namespace) -> int:
             )
             return EXIT_FAILED
     faults = ["injection_failure"] + list(args.fault or [])
-    cfg = CampaignConfig(
-        campaign_id=args.campaign_id or new_campaign_id(args.strategy),
-        brief=args.brief or "",
-        assay_id=assay.assay_id,
-        workcell_id=workcell.workcell_id,
-        strategy=args.strategy,
-        rounds=args.rounds,
-        conditions_per_round=args.conditions,
-        replicates=args.replicates,
-        seed=args.seed,
-        surface_seed=args.surface_seed,
-        approval_policy=args.approval,
-        faults=faults,
-        assay=portable(args.assay),
-        workcell=portable(args.workcell),
-        client=clients.spec if clients is not None else "",
-    )
+    try:
+        cfg = CampaignConfig(
+            campaign_id=args.campaign_id or new_campaign_id(args.strategy),
+            brief=args.brief or "",
+            assay_id=assay.assay_id,
+            workcell_id=workcell.workcell_id,
+            strategy=args.strategy,
+            rounds=args.rounds,
+            conditions_per_round=args.conditions,
+            replicates=args.replicates,
+            seed=args.seed,
+            surface_seed=args.surface_seed,
+            approval_policy=args.approval,
+            faults=faults,
+            assay=portable(args.assay),
+            workcell=portable(args.workcell),
+            client=clients.spec if clients is not None else "",
+        )
+    except ValueError as exc:
+        print(
+            f"error: {str(exc).splitlines()[-1] if 'unknown fault' not in str(exc) else _first_reason(exc)}"
+        )
+        return EXIT_FAILED
     cdir = start_campaign(cfg, clients, None, args.campaigns)
     print(campaign_status(cdir))
     return _exit(load_cstate(cdir).state)
+
+
+def _first_reason(exc: Exception) -> str:
+    for line in str(exc).splitlines():
+        if "unknown fault" in line:
+            return line.strip().removeprefix("Value error, ")
+    return str(exc).splitlines()[0]
 
 
 def resume_campaign_cmd(path: Path, client: str | None) -> int:
@@ -104,9 +117,20 @@ def approve_campaign_cmd(path: Path, by: str | None, comment: str) -> int:
 
 
 def cmd_report(args: argparse.Namespace) -> int:
-    from labauto.report import build_report
+    from labauto.report import build_report, model_note_writer
 
-    print(f"Wrote {build_report(Path(args.campaign))}")
+    writer = None
+    if args.note:
+        from labauto.cli_plan import ConfigError, make_clients, settings_for
+
+        try:
+            writer = model_note_writer(
+                make_clients(args.client, settings_for(args.client)), Path(args.campaign)
+            )
+        except ConfigError as exc:
+            print(f"error: {exc}")
+            return EXIT_FAILED
+    print(f"Wrote {build_report(Path(args.campaign), note_writer=writer)}")
     return EXIT_DONE
 
 
@@ -154,7 +178,8 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
             f"--rounds {args.rounds}",
         ]
         + ([f"--surface-seed {args.surface_seed}"] if args.surface_seed is not None else [])
-        + ([f"--out {args.out}", f"--png {args.png}"] if args.out != "docs/benchmark.md" else [])
+        + ([f"--out {args.out}"] if args.out != "docs/benchmark.md" else [])
+        + ([f"--png {args.png}"] if args.png != "docs/img/benchmark.png" else [])
     )
     write_outputs(
         result, args.rounds, command, Path(args.out), Path(args.png), model_name, git_commit()
@@ -247,6 +272,8 @@ def add_parsers(sub) -> None:
 
     p = sub.add_parser("report", help="rebuild a campaign's report")
     p.add_argument("campaign")
+    p.add_argument("--note", action="store_true", help="ask a model for a short note on the tables")
+    p.add_argument("--client", default="live", help="live, replay:<file>, or scripted:<file>")
     p.set_defaults(func=cmd_report)
 
     p = sub.add_parser("benchmark", help="compare strategies over many seeds (fast path)")

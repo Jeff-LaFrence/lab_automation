@@ -29,6 +29,23 @@ MAX_REPEATS = 2
 SOURCES = ("optimizer", "own", "confirm")
 
 
+class ToolError(ValueError):
+    """A tool call the decider made with arguments the tool cannot use."""
+
+
+def _whole(name: str, value: Any, low: int) -> int:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or int(value) != value
+        or value < low
+    ):
+        raise ToolError(
+            f"'{name}' must be a whole number of at least {low}, not {json.dumps(value)}"
+        )
+    return int(value)
+
+
 class PickIn(BaseModel):
     conditions: dict[str, float]
     source: str
@@ -99,7 +116,11 @@ def validate_final(turn: DeciderTurn, n: int, history: History, assay: Assay) ->
         seen.add(k)
         if k in tested:
             repeats += 1
-        if len(p.reason.split()) > MAX_REASON_WORDS:
+        if not p.reason.strip():
+            errors.append(
+                f"Pick {i + 1} has no reason. Give one of {MAX_REASON_WORDS} words or fewer."
+            )
+        elif len(p.reason.split()) > MAX_REASON_WORDS:
             errors.append(
                 f"Pick {i + 1} has a reason of {len(p.reason.split())} words. The limit is {MAX_REASON_WORDS}."
             )
@@ -126,12 +147,32 @@ class ModelDecider:
         self.transcript = transcript
 
     def _tool(self, opt: Optimizer, turn: DeciderTurn) -> Any:
+        """Run one tool. Raises ToolError, with a message for the model, on bad arguments."""
         args = dict(turn.args or {})
         if turn.tool == "suggest":
-            return opt.suggest(int(args.get("n", 8)))
+            return opt.suggest(_whole("n", args.get("n", 8), low=1))
         if turn.tool == "predict":
-            return opt.predict(list(args.get("conditions") or []))
-        return opt.results(args.get("top_k"), args.get("round"))
+            conds = args.get("conditions")
+            if not isinstance(conds, list) or not conds:
+                raise ToolError("predict needs 'conditions': a list of condition objects")
+            for i, c in enumerate(conds[:10]):
+                if (
+                    not isinstance(c, dict)
+                    or set(c) != set(self.assay.factors)
+                    or not all(
+                        isinstance(v, (int, float)) and not isinstance(v, bool) for v in c.values()
+                    )
+                ):
+                    raise ToolError(
+                        f"predict condition {i + 1} must give a number for each of: {', '.join(self.assay.factors)}"
+                    )
+            return opt.predict(conds)
+        top_k = args.get("top_k")
+        rnd = args.get("round")
+        return opt.results(
+            None if top_k is None else _whole("top_k", top_k, low=1),
+            None if rnd is None else _whole("round", rnd, low=1),
+        )
 
     def decide(self, history: History, n: int, brief: str, seed: int) -> Decision:
         start = time.perf_counter()
@@ -200,7 +241,18 @@ class ModelDecider:
                         {"role": "user", "content": "Name the tool: suggest, predict, or results."}
                     )
                     continue
-                output = self._tool(opt, turn)
+                try:
+                    output = self._tool(opt, turn)
+                except ToolError as exc:
+                    invalid += 1
+                    reason = f"a {turn.tool} call with bad arguments: {exc}"
+                    tool_calls.append(
+                        ToolCall(tool=turn.tool, args=turn.args, result={"error": str(exc)})
+                    )
+                    messages.append(
+                        {"role": "user", "content": f"That {turn.tool} call failed: {exc}."}
+                    )
+                    continue
                 tool_calls.append(ToolCall(tool=turn.tool, args=turn.args, result=output))
                 left = MAX_TOOL_CALLS - len(tool_calls)
                 messages.append(

@@ -63,19 +63,3 @@ class LocalStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
         return path
-
-
-class MemoryStore:
-    """Keeps results in memory. Used by the benchmark's fast path."""
-
-    def __init__(self):
-        self.rows: dict[str, list[dict]] = {}
-
-    def append_results(self, campaign_id: str, rows: list[dict]) -> None:
-        self.rows.setdefault(campaign_id, []).extend(rows)
-
-    def load_results(self, campaign_id: str) -> list[dict]:
-        return list(self.rows.get(campaign_id, []))
-
-    def save_record(self, campaign_id: str, name: str, data: object) -> Path:
-        return Path(name)

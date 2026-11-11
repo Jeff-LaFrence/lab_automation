@@ -216,7 +216,7 @@ def test_optimizer_finds_a_near_optimal_condition_in_six_rounds(assay):
 def history_after_round_one(assay):
     from labauto.decide.optimizer import round_one
 
-    decision = round_one(assay, 8, 1, "test")
+    decision = round_one(assay, 8, 1)
     design = make_design(grid=None, conditions=[p.conditions for p in decision.picks], replicates=3)
     plan = expand(design, assay)
     _, results, _ = measure_and_analyze(

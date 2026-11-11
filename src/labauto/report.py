@@ -17,7 +17,9 @@ from labauto.decide.base import build_history, recommendation
 from labauto.models import Decision, QcReport
 
 NOTE_REJECTED = "Model note rejected: it contained numbers that are not in the data."
-_NUMBER = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?")
+# Every run of digits counts, with or without a leading dot, even inside a word
+# ("a99", "n=3", ".9"), so a number cannot slip past the check by its spelling.
+_NUMBER = re.compile(r"(?<![\d.])\.?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?")
 MAX_NOTE_WORDS = 120
 
 
@@ -31,7 +33,8 @@ def check_note_numbers(note: str, tables: str) -> list[str]:
     bad = []
     for token in numbers_in(note):
         value = float(token)
-        places = len(token.split(".")[1]) if "." in token else 0
+        mantissa = re.split(r"[eE]", token)[0]
+        places = len(mantissa.split(".", 1)[1]) if "." in mantissa else 0
         if not any(round(t, places) == round(value, places) for t in table_values):
             bad.append(token)
     return bad
@@ -45,9 +48,58 @@ def _cond(c: dict[str, float]) -> str:
     return ", ".join(f"{k} {fmt(v)}" for k, v in c.items())
 
 
+NOTE_EMPTY = "Model note rejected: the model returned no note."
+
+
+def model_note_writer(clients, cdir: Path):
+    """A note writer that asks the report_note endpoint for a short note on the tables.
+
+    Returns (writer, source): the source says whether a model or a scripted
+    client wrote it. Failures give no note, never a made up one.
+    """
+    from labauto.agents.llm import Transcript, chat
+    from labauto.agents.planner import load_prompt
+    from labauto.agents.router import estimate_tokens, route
+
+    def write(tables: str) -> tuple[str, str]:
+        messages = [
+            {"role": "system", "content": load_prompt("report_note.md")},
+            {"role": "user", "content": tables},
+        ]
+        decision = route("report_note", estimate_tokens(messages), None, cdir / "model_calls.jsonl")
+        try:
+            result = chat(
+                clients.local,
+                decision.label,
+                messages,
+                temperature=0.3,
+                transcript=Transcript(cdir / "transcript.jsonl"),
+                role="report_note",
+                meta={"scope": "report_note", "attempt": 1},
+                max_calls=1,
+                text_only=True,
+            )
+        except Exception as exc:  # no note is better than a made up one
+            return "", f"the model could not be reached ({type(exc).__name__})"
+        source = (
+            "a scripted client (hand-written text, not a model)"
+            if result.model == "scripted"
+            else f"model {result.model or 'unknown'}"
+        )
+        return (result.parsed or {}).get("text", ""), source
+
+    return write
+
+
 def build_report(cdir: Path, note_writer=None) -> Path:
     """Write report.md and progress.png for a campaign. note_writer(tables) -> str is optional."""
-    from labauto.campaign import load_config, load_cstate, load_round_approval, round_dir
+    from labauto.campaign import (
+        decided_by_text,
+        load_config,
+        load_cstate,
+        load_round_approval,
+        round_dir,
+    )
     from labauto.store import LocalStore
 
     cfg = load_config(cdir)
@@ -79,11 +131,7 @@ def build_report(cdir: Path, note_writer=None) -> Path:
         decision = Decision.model_validate_json(
             (rdir / "decision.json").read_text(encoding="utf-8")
         )
-        by = (
-            "shared Latin hypercube"
-            if r == 1
-            else decision.strategy + (f" ({decision.model})" if decision.model else "")
-        )
+        by = decided_by_text(decision)
         round_lines.append(
             f"| {r} | {_f(best)} | {', '.join(events) or 'none'} | {approval.mode if approval else 'none'} "
             f"| {decision.fallback or 'none'} | {by} |"
@@ -157,20 +205,24 @@ def build_report(cdir: Path, note_writer=None) -> Path:
         out.append("No condition has a valid measurement yet.")
     out += ["", "## Model note", ""]
     if note_writer is None:
-        out.append("None. No model wrote a note for this campaign.")
+        out.append("None. No live model was available to write a note for this campaign.")
     else:
-        note = (note_writer(tables) or "").strip()
+        written = note_writer(tables)
+        note, source = written if isinstance(written, tuple) else (written, "a model")
+        note = (note or "").strip()
         words = len(note.split())
         bad = check_note_numbers(note, tables)
-        if not note or words > MAX_NOTE_WORDS or bad:
+        if not note:
             out.append(
-                NOTE_REJECTED
-                if bad or not note
-                else f"Model note rejected: it has {words} words, the limit is {MAX_NOTE_WORDS}."
+                NOTE_EMPTY + (f" ({source})" if source.startswith("the model could not") else "")
             )
+        elif bad:
+            out.append(NOTE_REJECTED)
+        elif words > MAX_NOTE_WORDS:
+            out.append(f"Model note rejected: it has {words} words, the limit is {MAX_NOTE_WORDS}.")
         else:
             out += [
-                "Written by a model from the tables above. Every number in it was checked against the tables.",
+                f"Written by {source} from the tables above, not by code. Every number in it was checked against the tables.",
                 "",
                 f"> {note}",
             ]
