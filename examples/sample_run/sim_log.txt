@@ -1,0 +1,645 @@
+solvent: bulk additions, one tip, dispensed from above the liquid
+Picking up tip from A1 of Opentrons OT-2 96 Tip Rack 300 µL on slot 1
+Aspirating 90.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 90.0 uL into A1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 90.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 90.0 uL into B1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 86.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 86.0 uL into C1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 86.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 86.0 uL into D1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 74.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 74.0 uL into E1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 72.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 72.0 uL into F1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 96.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 96.0 uL into G1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 88.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 88.0 uL into H1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 84.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 84.0 uL into A2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 84.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 84.0 uL into B2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 78.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 78.0 uL into C2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 82.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 82.0 uL into D2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 86.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 86.0 uL into E2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 86.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 86.0 uL into F2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 84.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 84.0 uL into G2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 82.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 82.0 uL into H2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 64.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 64.0 uL into A3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 76.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 76.0 uL into B3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 98.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 98.0 uL into C3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 92.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 92.0 uL into D3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 74.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 74.0 uL into E3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 78.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 78.0 uL into F3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 82.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 82.0 uL into G3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 64.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 64.0 uL into H3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 86.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 86.0 uL into A4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 98.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 98.0 uL into B4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 64.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 64.0 uL into C4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 78.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 78.0 uL into D4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 76.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 76.0 uL into E4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 98.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 98.0 uL into F4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 92.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 92.0 uL into G4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 96.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 96.0 uL into H4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 74.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 74.0 uL into A5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 76.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 76.0 uL into B5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 72.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 72.0 uL into C5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 88.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 88.0 uL into D5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 88.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 88.0 uL into E5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 72.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 72.0 uL into F5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 96.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 96.0 uL into G5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 92.0 uL from A5 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 92.0 uL into H5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Dropping tip into Trash Bin on slot 12
+substrate: bulk additions, one tip, dispensed from above the liquid
+Picking up tip from B1 of Opentrons OT-2 96 Tip Rack 300 µL on slot 1
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into A1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into D1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into E1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into G1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into H1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into A2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into D2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into E2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into G2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into H2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into A3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into D3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into E3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into G3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into H3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into A4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into D4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into E4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into G4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into H4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into A5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into D5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into E5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into G5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A1 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into H5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Dropping tip into Trash Bin on slot 12
+cosolvent: bulk additions, one tip, dispensed from above the liquid
+Picking up tip from C1 of Opentrons OT-2 96 Tip Rack 300 µL on slot 1
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into A1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into D1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into E1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into G1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into H1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into A2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into D2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into E2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into G2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into H2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into A3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into D3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into E3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into G3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into H3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into A4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into D4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into E4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into G4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into H4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into A5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into D5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into E5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into G5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A4 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into H5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Dropping tip into Trash Bin on slot 12
+base: bulk additions, one tip, dispensed from above the liquid
+Picking up tip from D1 of Opentrons OT-2 96 Tip Rack 300 µL on slot 1
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into A1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into B1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into C1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into D1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into E1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into G1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into H1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into A2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into B2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into D2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into E2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into F2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into G2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into H2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into A3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into C3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into D3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into E3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into G3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into H3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into A4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into B4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into D4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into E4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into F4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into G4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into H4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into A5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into A5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into B5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into B5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into C5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into C5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into D5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into D5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 30.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 30.0 uL into E5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into E5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 40.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 40.0 uL into F5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into F5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into G5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into G5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Aspirating 20.0 uL from A3 of NEST 12 Well Reservoir 15 mL on slot 3 at 92.86 uL/sec
+Dispensing 20.0 uL into H5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Blowing out into H5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 92.86 uL/sec
+Dropping tip into Trash Bin on slot 12
+catalyst: small additions, fresh tip per well, dispensed into the liquid
+Picking up tip from A1 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 4.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 4.0 uL into C1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from B1 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 4.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 4.0 uL into D1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from C1 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 16.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 16.0 uL into E1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from D1 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 8.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 8.0 uL into F1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from E1 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 4.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 4.0 uL into G1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from F1 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 2.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 2.0 uL into H1 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from G1 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 16.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 16.0 uL into A2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from H1 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 16.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 16.0 uL into B2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from A2 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 2.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 2.0 uL into C2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from B2 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 8.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 8.0 uL into D2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from C2 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 4.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 4.0 uL into E2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from D2 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 4.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 4.0 uL into F2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from E2 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 16.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 16.0 uL into G2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from F2 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 8.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 8.0 uL into H2 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from G2 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 16.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 16.0 uL into A3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from H2 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 4.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 4.0 uL into B3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from A3 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 2.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 2.0 uL into C3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from B3 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 8.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 8.0 uL into D3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from C3 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 16.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 16.0 uL into E3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from D3 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 2.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 2.0 uL into F3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from E3 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 8.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 8.0 uL into G3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from F3 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 16.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 16.0 uL into H3 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from G3 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 4.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 4.0 uL into A4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from H3 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 2.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 2.0 uL into B4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from A4 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 16.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 16.0 uL into C4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from B4 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 2.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 2.0 uL into D4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from C4 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 4.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 4.0 uL into E4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from D4 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 2.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 2.0 uL into F4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from E4 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 8.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 8.0 uL into G4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from F4 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 4.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 4.0 uL into H4 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from G4 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 16.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 16.0 uL into A5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from H4 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 4.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 4.0 uL into B5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from A5 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 8.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 8.0 uL into C5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from B5 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 2.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 2.0 uL into D5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from C5 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 2.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 2.0 uL into E5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from D5 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 8.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 8.0 uL into F5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from E5 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 4.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 4.0 uL into G5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12
+Picking up tip from F5 of Opentrons OT-2 96 Tip Rack 20 µL on slot 4
+Aspirating 8.0 uL from A2 of NEST 12 Well Reservoir 15 mL on slot 3 at 7.56 uL/sec
+Dispensing 8.0 uL into H5 of Corning 96 Well Plate 360 µL Flat on slot 2 at 7.56 uL/sec
+Dropping tip into Trash Bin on slot 12

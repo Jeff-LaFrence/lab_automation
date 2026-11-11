@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "labauto"
+version = "0.1.0"
+description = "A checked path from a model's experiment idea to a liquid handler protocol, with a simulated closed loop."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "opentrons==9.0.0",
+    "pydantic>=2.6,<3",
+    "scikit-learn>=1.4",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+tecan = ["pylabrobot==0.2.2"]
+hosted = ["anthropic"]
+service = ["fastapi", "uvicorn"]
+memory = ["lancedb"]
+
+[project.scripts]
+labauto = "labauto.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+labauto = ["agents/prompts/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: takes more than a few seconds"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["examples/sample_run", "examples/**/protocol.py", "*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]
