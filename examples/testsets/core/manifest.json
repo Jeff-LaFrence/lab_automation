@@ -117,7 +117,7 @@
     {
       "id": "04_ambiguous",
       "file": "../../requests/04_ambiguous.txt",
-      "intent": "No numbers given. The usual conditions are the reference control (2.0 mol %, 1.5 equiv, 20%). A faithful design includes those usual values (2.0 mol % catalyst, 1.5 equiv base, 20% co-solvent each appear somewhere), at least one base level above 1.5, and lists what it assumed.",
+      "intent": "No numbers given. The usual conditions are the reference control (2.0 mol %, 1.5 equiv, 20%). A faithful design includes those usual values (2.0 mol % catalyst, 1.5 equiv base, 20% co-solvent each appear somewhere), at least one base level above 1.5, and lists what it assumed. The usual conditions are stored in the assay as the reference control, and the planner sees them.",
       "arithmetic": "Any small screen fits. The check is on the content, not the size.",
       "expect": {
         "as_asked_valid": null,
@@ -152,7 +152,7 @@
     {
       "id": "05_reagent_limit",
       "file": "../../requests/05_reagent_limit.txt",
-      "intent": "Catalyst at 10 mol % everywhere is the point of the request, so a repair must keep it and cut wells instead. Lowering the catalyst to save reagent is unfaithful. Base and co-solvent values must come from the request.",
+      "intent": "Catalyst at 10 mol % everywhere is the point of the request, so a repair must keep it and cut wells instead. Lowering the catalyst to save reagent is unfaithful. Base and co-solvent values must come from the request. Owner review: spacing the base series out (for example 0.5 equiv steps instead of 0.25) is a fair repair and counts as faithful, unless a lab runs a fixed standard array.",
       "arithmetic": "33 conditions x 3 = 99 sample wells against 92. In duplicate, 66 sample wells use 1320 uL of catalyst plus 8 uL for the reference controls = 1328 uL against 1080 usable (SPEC Appendix C). At 20 uL per well, at most 53 sample wells fit.",
       "expect": {
         "as_asked_valid": false,
