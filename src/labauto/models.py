@@ -319,6 +319,9 @@ class SimResult(BaseModel):
     tips_used: dict[str, int] = Field(default_factory=dict)
     error: PlanError | None = None
     seconds: float = 0.0
+    well_volumes: dict[str, Volume] | None = (
+        None  # tracked plate volumes, when the simulator keeps them
+    )
 
 
 class CheckResult(BaseModel):

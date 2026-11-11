@@ -30,6 +30,10 @@ class Instrument(Protocol):
         """True when a deck position is valid on this instrument."""
         ...
 
+    def valid_mount(self, mount: str) -> bool:
+        """True when a pipette mount is valid on this instrument."""
+        ...
+
     def compile(self, worklist: Worklist, workcell: Workcell, plan: Plan, out_dir: Path) -> Path:
         """Write the protocol for a worklist into out_dir and return its path."""
         ...

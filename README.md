@@ -41,9 +41,11 @@ Dashed boxes are not built yet. The four slots (planner, instrument, store, deci
 
 ```
 python3 -m venv .venv && . .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev,tecan]"
 labauto demo
 ```
+
+The `[tecan]` extra adds PyLabRobot for the second instrument. Without it, that demo row prints `SKIPPED (pylabrobot not installed)`.
 
 Output of `labauto demo` from a real run:
 
@@ -51,16 +53,17 @@ Output of `labauto demo` from a real run:
 $ labauto demo
 Stage 1: designs and plans through the check pipeline
 
-case                     result   layer      detail
-good_factorial           PASS                40 wells, 645 steps simulated, ledger matches
-bad_off_grid             CAUGHT   design     FACTOR_OFF_GRID catalyst_mol_pct=2.2 (nearest 2.0, 2.5)
-bad_too_many_wells       CAUGHT   design     TOO_MANY_WELLS 120 needed, 92 available
-bad_reagent_short        CAUGHT   workcell   SOURCE_SHORT catalyst 1328 uL needed, 1080 usable
-bad_overfill             CAUGHT   plan       WELL_OVERFILL plate:E1 600 uL, limit 250
-deck_conflict            CAUGHT   workcell   DECK_CONFLICT slot 2: plate, reservoir
+case                         result   layer      detail
+good_factorial               PASS                40 wells, 645 steps simulated, ledger matches
+bad_off_grid                 CAUGHT   design     FACTOR_OFF_GRID catalyst_mol_pct=2.2 (nearest 2.0, 2.5)
+bad_too_many_wells           CAUGHT   design     TOO_MANY_WELLS 120 needed, 92 available
+bad_reagent_short            CAUGHT   workcell   SOURCE_SHORT catalyst 1328 uL needed, 1080 usable
+bad_overfill                 CAUGHT   plan       WELL_OVERFILL plate:E1 600 uL, limit 250
+deck_conflict                CAUGHT   workcell   DECK_CONFLICT slot 2: plate, reservoir
+good_factorial (tecan_evo)   PASS                same plan, second instrument
 ```
 
-Each row is one input sent through the check pipeline. Every failure is caught at a named layer, with the numbers that explain it. The run folders land in `runs/`. One of them is committed as [examples/sample_run/](examples/sample_run/).
+Each row is one input sent through the check pipeline. The last row sends the same design to a second workcell, a Tecan EVO, and confirms the plan is identical: only the instrument backend changes. Every failure is caught at a named layer, with the numbers that explain it. The run folders land in `runs/`. One of them is committed as [examples/sample_run/](examples/sample_run/).
 
 ## How a bad plan gets caught
 
@@ -113,7 +116,7 @@ The numbers are in the message, the hint says what would fix it, and `options` n
 |---|---|
 | Design, plan, worklist, validators | built and tested |
 | Opentrons OT-2 protocol generation | built, checked in the vendor's simulator, never run on a robot |
-| Tecan EVO backend | not built |
+| Tecan EVO backend | built, bookkeeping simulation only |
 | Planner agent, repair, escalation, approval | not built |
 | LC/MS readout | not built |
 | Closed loop | not built |
@@ -131,7 +134,7 @@ The four slots:
 | Slot | Interface | Built |
 |---|---|---|
 | Planner | `propose(context) -> PlannerOutput` | not yet |
-| Instrument | `compile(worklist, workcell, plan, out_dir) -> Path`, `simulate(artifact, workcell) -> SimResult` | Opentrons OT-2 |
+| Instrument | `compile(worklist, workcell, plan, out_dir) -> Path`, `simulate(artifact, workcell) -> SimResult` | Opentrons OT-2, Tecan EVO (simulated) |
 | Decider | `decide(history, n, brief, seed) -> Decision` | not yet |
 | Store | `append_results`, `load_results`, `save_record` | not yet |
 
@@ -150,6 +153,7 @@ Nothing upstream changes: the design, plan, and worklist are vendor neutral.
 - Simulation only. No physical run has been made with this code.
 - An OT-2 with organic solvents is a poor match in practice: volatile liquids drip and some plastics do not hold up. Real reaction screening runs on other hardware. That is the reason the instrument is a slot.
 - One liquid handling rule stands in for liquid classes. Real methods need calibrated liquid classes, labware definitions taught on the actual deck, and mixing steps.
+- The Tecan backend checks volumes and tips, not collisions, calibration, liquid classes, or timing. It runs on PyLabRobot's bookkeeping simulator and has never driven a real instrument.
 - The Opentrons simulator does not catch an overfilled well, a volume below a pipette's minimum, or a source well drawn dry. Rules in this repository catch those. See [docs/tooling_notes.md](docs/tooling_notes.md).
 - No scheduler, no multi-instrument coordination, no sample tracking system.
 
@@ -169,13 +173,13 @@ Designed and directed by the repository owner. The code was written with an AI c
 
 ## Docs
 
-- [docs/tooling_notes.md](docs/tooling_notes.md): what the vendor simulator checks and misses, with the tests that prove each point.
+- [docs/tooling_notes.md](docs/tooling_notes.md): what each simulator checks and misses, with the tests that prove each point.
 - [docs/decisions.md](docs/decisions.md): choices made where the specification was silent, and open problems.
 
 ## Background
 
 - Opentrons Python Protocol API: https://docs.opentrons.com/v2/
-- PyLabRobot: https://docs.pylabrobot.org
+- PyLabRobot: https://docs.pylabrobot.org (used for the Tecan EVO simulation)
 - Self-Building Labs: https://self-building-labs.github.io/ (arXiv 2610.23826). That work builds lab capabilities in simulation before physical trials and saves validated skills for reuse. This repository borrows the simulate first habit.
 
 ## License

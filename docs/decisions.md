@@ -43,3 +43,21 @@ library, or where a fallback was taken. Open problems are at the end.
 - `summary.md` counts tips per pipette from the worklist rows. If two pipettes share a rack, it reports per rack instead.
 - Run records name the input file relative to the working folder, or by file name alone if it lies outside, so no home path lands in a record.
 - pytest's temporary folders go to `.labauto/pytest` (set in `tests/conftest.py`), so the suite writes nothing outside the repository. `test_tmp_path_is_inside_the_repository` pins this.
+
+## Stage 1b
+
+- The Tecan plate is `cor_96_wellplate_360uL_Fb`, not `Microplate_96_Well` as Appendix A suggests. The latter holds 1437 uL per well, so the tracker would not catch an overfill.
+- Tips: `DiTi_200ul_LiHa` for bulk and `DiTi_50ul_LiHa` for small transfers, mapped from the neutral keys `tips_200ul` and `tips_50ul` (already in `labware.py` since Stage 1).
+- Tecan pipettes are LiHa channels. The workcell's `mount` names the channel (`channel_0`, `channel_1`). The small pipette covers 1 to 50 uL, the large 20 to 200 uL.
+- The trash is placed at a fixed coordinate, because `EVO150Deck` has none and the deck only places Tecan resources on rails.
+- Added field `SimResult.well_volumes`: the plate volumes kept by the simulator's tracker, when it keeps them. The ledger check compares them with the plan's well totals. This is how "confirm the plate's tracked volumes equal the plan" is done.
+- The Tecan step log is one line per call the simulator accepted, written by this project. The chatterbox output is a table per call.
+- When a tip rack runs out, the compiled calls wrap to the first spot, so the tip tracker catches it when the workcell rules are skipped.
+- The demo table's first column is 29 characters wide, so `good_factorial (tecan_evo)` fits.
+- The Tecan row in the demo also checks that its plan equals the OT-2 plan for the same design. If they differ, the row says so and the demo fails.
+- The Instrument interface gained `valid_mount(mount)`. A pipette on a mount the instrument does not have is a `BAD_SLOT` workcell error with `needs_human` true. OT-2 mounts are `left` and `right`. Tecan mounts are `channel_0` to `channel_7`, written without leading zeros.
+- A design with no id gets one from its content without the workcell id, so the same design file gives the same plan on every workcell.
+- The Tecan artifact names the plan's plate, and only that plate's tracked volumes are read back. Another plate on the deck (a stock plate) is not part of the ledger.
+- `protocol_tecan.py` uses deck names only as dictionary keys, so any name in a workcell file gives a valid script.
+- If compiling fails, the pipeline reports `SIM_OTHER` at the simulator layer with `needs_human` true, instead of crashing.
+- PyLabRobot's "does not fit at rails" error maps to `SIM_DECK_CONFLICT`. `HasTipError` (a channel that already holds a tip) maps to `SIM_OTHER`, because it means the generator forgot to drop a tip, not that a rack is empty.
