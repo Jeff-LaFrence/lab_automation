@@ -225,10 +225,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_demo)
 
     from labauto.cli_loop import add_parsers as add_loop_parsers
+    from labauto.cli_nmr import add_parsers as add_nmr_parsers
+    from labauto.cli_paired import add_parsers as add_paired_parsers
     from labauto.cli_plan import add_parsers
+    from labauto.cli_review import add_parsers as add_review_parsers
 
     add_parsers(sub)
     add_loop_parsers(sub)
+    add_nmr_parsers(sub)
+    add_paired_parsers(sub)
+    add_review_parsers(sub)
     return parser
 
 
