@@ -233,16 +233,22 @@ def chat(
     meta: dict | None = None,
     max_calls: int = 2,
     text_only: bool = False,
+    wire: dict | None = None,
 ) -> ChatResult:
     """Ask for one JSON object. Retries once with the parse error appended.
 
     A second failure returns a ChatResult with parsed None and an error that
     starts with SCHEMA_INVALID. max_calls caps the calls (1 means no retry).
     With text_only, the reply is plain text: parsed is {"text": ...} with any
-    reasoning removed, and an empty reply counts as a failure.
+    reasoning removed, and an empty reply counts as a failure. wire, when
+    given, is the JSON schema sent to the server in place of the one built
+    from schema; the reply is still validated against schema.
     """
     meta = dict(meta or {})
-    json_schema = wire_schema(schema.model_json_schema()) if schema is not None else None
+    if wire is not None:
+        json_schema = wire
+    else:
+        json_schema = wire_schema(schema.model_json_schema()) if schema is not None else None
     convo = list(messages)
     total = ChatResult(endpoint_label=label)
     for call in range(1, max(1, max_calls) + 1):
