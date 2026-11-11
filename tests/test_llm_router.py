@@ -250,3 +250,29 @@ def test_prompt_that_fits_nowhere_is_trimmed(tmp_path):
 
 def test_token_estimate_is_characters_over_four():
     assert estimate_tokens([{"content": "x" * 400}]) == 100
+
+
+def test_reply_schema_sent_to_the_server_requires_every_key():
+    """A grammar server lets a model skip optional keys; a local model then skipped "grid"."""
+    from labauto.agents.llm import wire_schema
+    from labauto.decide.model_decider import DeciderTurn
+
+    sent = wire_schema(PlannerOutput.model_json_schema())
+    design = sent["$defs"]["ModelDesign"]
+    assert design["required"] == list(design["properties"])
+    assert {"grid", "conditions", "include_controls", "notes"} <= set(design["required"])
+    assert sent["$defs"]["Deviation"]["required"] == ["requested", "planned", "reason"]
+    turn = wire_schema(DeciderTurn.model_json_schema())
+    assert turn["required"] == ["action", "tool", "args", "picks", "round_note"]
+    source = PlannerOutput.model_json_schema()
+    wire_schema(source)
+    assert "grid" not in source["$defs"]["ModelDesign"]["required"]  # the input is not changed
+
+
+def test_live_client_sends_the_all_required_schema():
+    LiveClient._structured.clear()
+    seen: list = []
+    client = LiveClient({"local-main": ENDPOINT}, transport=mock_server(True, seen))
+    chat(client, "local-main", [{"role": "user", "content": "u"}], PlannerOutput)
+    schema = seen[-1]["response_format"]["json_schema"]["schema"]
+    assert "grid" in schema["$defs"]["ModelDesign"]["required"]

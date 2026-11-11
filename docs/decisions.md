@@ -128,9 +128,14 @@ library, or where a fallback was taken. Open problems are at the end.
 - The benchmark counts model decider rounds that fell back to the optimizer and prints the count beside the model row. Its plot link is relative to the page, and the exact command names `--out` and `--png` whenever they differ from the defaults.
 - `MemoryStore` was removed. The benchmark keeps its rows in a plain list, and `LocalStore` is the one Store implementation, as SPEC 9.5 says.
 
+## After v0.3: first live runs
+
+- The first live run used Ollama's OpenAI-compatible endpoint with a 32B local model. Both planner attempts came back with no "grid" and no "conditions", so every design was EMPTY_DESIGN. Ollama turns the reply schema into a grammar, and a property that is not required may be left out, so the model left out the two keys that hold the experiment. The reply schema sent to a server now lists every property as required (`wire_schema` in `agents/llm.py`); keys that may be null stay nullable. Replies are still validated against the pydantic models, so no rule changed. With this change the same prompt gave the requested grid on both of two tries.
+- `.env.example` stays as SPEC gives it. How to point it at Ollama is in `docs/tooling_notes.md`.
+
 ## Open problems
 
-- No model has run. Every model path (planner, hosted rung, model decider, report note) is built and tested with scripted clients only. Live results are pending: the planner evaluation (`docs/planner_eval.md`), recorded model sessions in `examples/recordings/`, the model decider row of the benchmark, and a model note in any campaign report. Each needs `labauto eval-planner`, `labauto plan`, `labauto benchmark`, or `labauto loop --strategy model` run against a configured endpoint.
+- No evaluation has run on a model. The planner has run on a local model only in single checks while the schema fix above was made. Every model path (planner, hosted rung, model decider, report note) is built and tested with scripted clients only. Live results are pending: the planner evaluation (`docs/planner_eval.md`), recorded model sessions in `examples/recordings/`, the model decider row of the benchmark, and a model note in any campaign report. Each needs `labauto eval-planner`, `labauto plan`, `labauto benchmark`, or `labauto loop --strategy model` run against a configured endpoint.
 - The model decider's prompt and the 120 word report note limit have never met a real model, so how often real replies need the retries and the fallback is unknown.
 - PyLabRobot's `DiTi_*_LiHa` tip definitions warn that their total tip length is zero or less. This does not affect the bookkeeping here, but a backend driving real hardware would need correct tip definitions.
 - No stage hit the stuck rule (three failed approaches to one problem). Stage 1b finished well inside its effort cap.

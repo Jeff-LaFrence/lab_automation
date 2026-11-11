@@ -14,6 +14,7 @@ Client types:
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import re
@@ -239,7 +240,7 @@ def chat(
     reasoning removed, and an empty reply counts as a failure.
     """
     meta = dict(meta or {})
-    json_schema = schema.model_json_schema() if schema is not None else None
+    json_schema = wire_schema(schema.model_json_schema()) if schema is not None else None
     convo = list(messages)
     total = ChatResult(endpoint_label=label)
     for call in range(1, max(1, max_calls) + 1):
@@ -307,6 +308,35 @@ def chat(
 
 
 # ---------------------------------------------------------------- clients
+
+
+def wire_schema(schema: dict) -> dict:
+    """The reply schema as sent to a server: every property is listed as required.
+
+    A server that turns the schema into a grammar (llama.cpp, Ollama) lets the
+    model leave out any optional property, and a local model will leave out
+    "grid" and "conditions" when it may. Requiring every key makes it write each
+    one, with null where null is allowed. Replies are still validated against
+    the pydantic model, so the defaults and rules there are unchanged.
+    """
+    out = copy.deepcopy(schema)
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            props = node.get("properties")
+            if isinstance(props, dict):
+                node["required"] = list(props)
+                for sub in props.values():
+                    walk(sub)
+            for key, value in node.items():
+                if key != "properties":
+                    walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(out)
+    return out
 
 
 def schema_instruction(schema: dict) -> str:

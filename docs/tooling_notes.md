@@ -142,3 +142,7 @@ Each dispense is recorded as it is issued, with the reagent of that channel's
 last aspirate. After the run, the plate's tracked volume in every well is
 carried back in `SimResult.well_volumes`, and the ledger check confirms it
 equals the plan (`test_ledger_and_tracked_volumes_match_the_plan`).
+
+## Ollama as the local endpoint
+
+Ollama serves an OpenAI-compatible API at `http://127.0.0.1:11434/v1`. To use it, set `LABAUTO_MAIN_BASE_URL` to that address and `LABAUTO_MAIN_MODEL` to the model's tag as `ollama list` shows it. Ollama accepts a JSON schema in `response_format` and enforces it with a grammar, so the planner's replies arrive as JSON with every key present.
