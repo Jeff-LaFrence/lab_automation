@@ -448,3 +448,129 @@ class Approval(BaseModel):
     protocol_hash: str | None = None
     envelope_ref: str | None = None
     void_reason: str | None = None
+
+
+# ---------------------------------------------------------------- closed loop (Stage 3)
+
+
+class Pick(BaseModel):
+    """One condition chosen for the next plate, with where it came from and why."""
+
+    conditions: dict[str, float]
+    source: str
+    reason: str = ""
+
+
+class ToolCall(BaseModel):
+    """One tool call the model decider made, with a short view of the result."""
+
+    tool: str
+    args: dict[str, Any] = Field(default_factory=dict)
+    result: Any = None
+
+
+class Decision(BaseModel):
+    """What a decider chose for one round, and how."""
+
+    round: int
+    strategy: str
+    model: str | None = None
+    picks: list[Pick]
+    tool_calls: list[ToolCall] = Field(default_factory=list)
+    fallback: str | None = None
+    round_note: str = ""
+    seconds: float = 0.0
+    tokens: int = 0
+
+
+class ConditionStat(BaseModel):
+    """Measured results for one condition over the valid wells of every plate so far."""
+
+    conditions: dict[str, float]
+    mean: float | None = None
+    sd: float | None = None
+    n: int = 0
+    flags: list[str] = Field(default_factory=list)
+    rounds: list[int] = Field(default_factory=list)
+
+
+class History(BaseModel):
+    """What a decider may see: measured results only, never the hidden surface."""
+
+    next_round: int
+    stats: list[ConditionStat] = Field(default_factory=list)
+    last_picks: list[dict[str, Any]] = Field(default_factory=list)
+    qc_events: list[str] = Field(default_factory=list)
+
+
+class QcEvent(BaseModel):
+    """One quality check finding on a plate."""
+
+    code: Literal["IS_OUT_OF_RANGE", "REPLICATE_SPREAD", "LOW_REPLICATES", "PLATE_QC_FAIL"]
+    where: str
+    message: str
+
+
+class QcReport(BaseModel):
+    """qc.json for one plate."""
+
+    round: int
+    attempt: int = 1
+    plate_ok: bool
+    negative_mean: float | None = None
+    negative_limit: float | None = None
+    reference_mean: float | None = None
+    reference_expected: float | None = None
+    reference_tolerance: float | None = None
+    is_median: float | None = None
+    excluded_wells: list[str] = Field(default_factory=list)
+    events: list[QcEvent] = Field(default_factory=list)
+
+
+class CampaignConfig(BaseModel):
+    """campaign.json: the settings a campaign was started with."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    campaign_id: str
+    brief: str = ""
+    assay_id: str
+    workcell_id: str
+    strategy: Literal["random", "optimizer", "model"]
+    rounds: int = 6
+    conditions_per_round: int = 8
+    replicates: int = 3
+    seed: int = 1
+    surface_seed: int = 0
+    approval_policy: Literal["always", "envelope", "auto_demo"] = "always"
+    faults: list[str] = Field(default_factory=lambda: ["injection_failure"])
+    assay: str = ""
+    workcell: str = ""
+    client: str = ""
+
+
+class Envelope(BaseModel):
+    """envelope.json: the limits inside which later rounds may be approved without a person."""
+
+    assay_id: str
+    workcell_id: str
+    wells_approved: int
+    approved_by: str
+    approved_at: str
+    approval_ref: str
+    max_auto_rounds: int = 5
+    auto_rounds_used: int = 0
+
+
+class CampaignState(BaseModel):
+    """state.json for a campaign."""
+
+    campaign_id: str
+    state: str
+    updated_at: str
+    round: int = 1
+    round_state: str = "DECIDING"
+    needs_human: str | None = None
+    appended_rounds: list[int] = Field(default_factory=list)
+    anomalies: dict[str, str] = Field(default_factory=dict)
+    history: list[dict[str, str]] = Field(default_factory=list)

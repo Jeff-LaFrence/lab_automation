@@ -192,7 +192,10 @@ def cmd_demo(args: argparse.Namespace) -> int:
     from labauto.cli_plan import demo_planner
 
     all_ok &= demo_planner(args.runs, live=getattr(args, "live", False))
-    print()
+
+    from labauto.cli_loop import demo_loop
+
+    all_ok &= demo_loop(args.runs)
     print(f"Run folders are in {args.runs}/. Finished in {time.perf_counter() - start:.1f} s.")
     return EXIT_PASS if all_ok else EXIT_CAUGHT
 
@@ -221,9 +224,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.set_defaults(func=cmd_demo)
 
+    from labauto.cli_loop import add_parsers as add_loop_parsers
     from labauto.cli_plan import add_parsers
 
     add_parsers(sub)
+    add_loop_parsers(sub)
     return parser
 
 

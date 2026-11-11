@@ -1,0 +1,1 @@
+You are given the tables from a campaign report. Write a note of at most 120 words for a scientist: what the campaign found, how confident the data makes you, and one thing worth checking next. Use only numbers that appear in the tables, copied exactly. Do not invent any number.

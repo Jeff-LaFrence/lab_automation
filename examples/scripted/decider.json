@@ -1,0 +1,172 @@
+[
+ {
+  "action": "tool",
+  "tool": "suggest",
+  "args": {
+   "n": 8
+  }
+ },
+ {
+  "action": "final",
+  "picks": [
+   {
+    "conditions": {
+     "catalyst_mol_pct": 2.0,
+     "base_equiv": 1.0,
+     "cosolvent_pct": 10
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 2.0,
+     "base_equiv": 1.0,
+     "cosolvent_pct": 30
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 2.0,
+     "base_equiv": 2.5,
+     "cosolvent_pct": 10
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 2.0,
+     "base_equiv": 2.5,
+     "cosolvent_pct": 30
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 8.0,
+     "base_equiv": 1.0,
+     "cosolvent_pct": 10
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 8.0,
+     "base_equiv": 1.0,
+     "cosolvent_pct": 30
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 8.0,
+     "base_equiv": 2.5,
+     "cosolvent_pct": 10
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 8.0,
+     "base_equiv": 2.5,
+     "cosolvent_pct": 30
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a fixed coarse grid"
+   }
+  ],
+  "round_note": "Scripted session: fixed picks written by hand to exercise the tool loop. They ignore the data."
+ },
+ {
+  "action": "tool",
+  "tool": "results",
+  "args": {
+   "top_k": 5
+  }
+ },
+ {
+  "action": "final",
+  "picks": [
+   {
+    "conditions": {
+     "catalyst_mol_pct": 2.0,
+     "base_equiv": 1.0,
+     "cosolvent_pct": 10
+    },
+    "source": "confirm",
+    "reason": "scripted repeat of a round 2 pick"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 8.0,
+     "base_equiv": 2.5,
+     "cosolvent_pct": 30
+    },
+    "source": "confirm",
+    "reason": "scripted repeat of a round 2 pick"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 4.0,
+     "base_equiv": 3.0,
+     "cosolvent_pct": 0
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a second fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 4.0,
+     "base_equiv": 3.0,
+     "cosolvent_pct": 20
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a second fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 10.0,
+     "base_equiv": 1.5,
+     "cosolvent_pct": 0
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a second fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 10.0,
+     "base_equiv": 1.5,
+     "cosolvent_pct": 20
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a second fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 10.0,
+     "base_equiv": 3.0,
+     "cosolvent_pct": 0
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a second fixed coarse grid"
+   },
+   {
+    "conditions": {
+     "catalyst_mol_pct": 10.0,
+     "base_equiv": 3.0,
+     "cosolvent_pct": 20
+    },
+    "source": "own",
+    "reason": "scripted pick: corner of a second fixed coarse grid"
+   }
+  ],
+  "round_note": "Scripted session: a second fixed grid with two repeats. The picks ignore the data."
+ }
+]
