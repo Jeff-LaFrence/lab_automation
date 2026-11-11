@@ -1,0 +1,44 @@
+{
+  "design_id": "d-example-bad-reagent-short",
+  "assay_id": "generic_reaction_screen_v1",
+  "workcell_id": "ot2_bench",
+  "title": "High catalyst loading across base and co-solvent",
+  "grid": {
+    "catalyst_mol_pct": [
+      10
+    ],
+    "base_equiv": [
+      0.5,
+      0.75,
+      1.0,
+      1.25,
+      1.5,
+      1.75,
+      2.0,
+      2.25,
+      2.5,
+      2.75,
+      3.0
+    ],
+    "cosolvent_pct": [
+      0,
+      20,
+      40
+    ]
+  },
+  "conditions": null,
+  "replicates": 2,
+  "include_controls": true,
+  "layout": {
+    "strategy": "randomized",
+    "seed": 7
+  },
+  "deviations": [],
+  "assumptions": [],
+  "notes": "33 conditions at 10 mol % catalyst in duplicate draw more catalyst than is loaded.",
+  "created_by": {
+    "role": "person",
+    "model": null,
+    "rung": null
+  }
+}

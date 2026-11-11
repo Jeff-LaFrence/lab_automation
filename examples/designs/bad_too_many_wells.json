@@ -1,0 +1,44 @@
+{
+  "design_id": "d-example-bad-too-many-wells",
+  "assay_id": "generic_reaction_screen_v1",
+  "workcell_id": "ot2_bench",
+  "title": "Every catalyst loading from 1 to 10 mol % by four base levels",
+  "grid": {
+    "catalyst_mol_pct": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "base_equiv": [
+      1.0,
+      1.5,
+      2.0,
+      2.5
+    ],
+    "cosolvent_pct": [
+      20
+    ]
+  },
+  "conditions": null,
+  "replicates": 3,
+  "include_controls": true,
+  "layout": {
+    "strategy": "randomized",
+    "seed": 7
+  },
+  "deviations": [],
+  "assumptions": [],
+  "notes": "40 conditions in triplicate need 120 sample wells. 92 are available.",
+  "created_by": {
+    "role": "person",
+    "model": null,
+    "rung": null
+  }
+}

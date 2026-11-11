@@ -1,0 +1,31 @@
+{
+  "assay_id": "generic_reaction_screen_v1",
+  "description": "Synthetic small molecule reaction condition screen. Reagent names are placeholders and no real chemistry is modeled.",
+  "plate_labware": "plate_96_flat_360ul",
+  "total_volume_ul": 200,
+  "max_well_volume_ul": 250,
+  "default_replicates": 3,
+  "addition_order": ["solvent", "substrate", "cosolvent", "base", "catalyst"],
+  "reagents": {
+    "substrate": {"role": "fixed", "volume_ul": 40},
+    "catalyst":  {"role": "factor", "factor": "catalyst_mol_pct"},
+    "base":      {"role": "factor", "factor": "base_equiv"},
+    "cosolvent": {"role": "factor", "factor": "cosolvent_pct"},
+    "solvent":   {"role": "fill"}
+  },
+  "factors": {
+    "catalyst_mol_pct": {"unit": "mol %", "value_per_ul": 0.5,  "min_ul": 1,  "max_ul": 20, "step_ul": 1},
+    "base_equiv":       {"unit": "equiv", "value_per_ul": 0.05, "min_ul": 10, "max_ul": 60, "step_ul": 5},
+    "cosolvent_pct":    {"unit": "% v/v", "value_per_ul": 0.5,  "min_ul": 0,  "max_ul": 80, "step_ul": 10}
+  },
+  "controls": {
+    "negative":  {"wells": ["A1", "B1"],
+                  "volumes_ul": {"substrate": 40, "catalyst": 0, "base": 30, "cosolvent": 40},
+                  "expect": {"yield_max": 5}},
+    "reference": {"wells": ["C1", "D1"],
+                  "conditions": {"catalyst_mol_pct": 2.0, "base_equiv": 1.5, "cosolvent_pct": 20},
+                  "expect": {"yield_center": 50, "yield_tolerance": 8}}
+  },
+  "analysis": {"k_product": 1.20, "k_substrate": 0.85, "internal_standard_area": 1000000},
+  "qc": {"internal_standard_tolerance": 0.25, "replicate_spread_max": 15}
+}

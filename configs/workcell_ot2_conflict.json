@@ -1,0 +1,23 @@
+{
+  "workcell_id": "ot2_bench_conflict",
+  "instrument": "opentrons_ot2",
+  "deck": [
+    {"name": "tips_300",  "labware": "tips_300ul",          "position": {"slot": 1}},
+    {"name": "tips_20",   "labware": "tips_20ul",           "position": {"slot": 4}},
+    {"name": "plate",     "labware": "plate_96_flat_360ul", "position": {"slot": 2}},
+    {"name": "reservoir", "labware": "reservoir_12_15ml",   "position": {"slot": 2}}
+  ],
+  "pipettes": [
+    {"name": "small", "model": "p20_single",  "mount": "left",  "min_ul": 1,  "max_ul": 20,  "tips": "tips_20"},
+    {"name": "large", "model": "p300_single", "mount": "right", "min_ul": 20, "max_ul": 300, "tips": "tips_300"}
+  ],
+  "liquid_handling": {"contact_dispense_below_ul": 20},
+  "inventory": {
+    "substrate": {"labware": "reservoir", "well": "A1", "volume_ul": 6000},
+    "catalyst":  {"labware": "reservoir", "well": "A2", "volume_ul": 1200},
+    "base":      {"labware": "reservoir", "well": "A3", "volume_ul": 8000},
+    "cosolvent": {"labware": "reservoir", "well": "A4", "volume_ul": 10000},
+    "solvent":   {"labware": "reservoir", "well": "A5", "volume_ul": 14000}
+  },
+  "dead_volume_fraction": 0.10
+}
