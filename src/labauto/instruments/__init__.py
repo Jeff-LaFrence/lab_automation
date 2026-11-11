@@ -11,8 +11,15 @@ def _ot2() -> Instrument:
     return OpentronsOT2()
 
 
+def _tecan() -> Instrument:
+    from labauto.instruments.tecan_evo import TecanEVO
+
+    return TecanEVO()
+
+
 REGISTRY = {
     "opentrons_ot2": _ot2,
+    "tecan_evo": _tecan,
 }
 
 

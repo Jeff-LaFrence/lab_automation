@@ -43,3 +43,15 @@ library, or where a fallback was taken. Open problems are at the end.
 - `summary.md` counts tips per pipette from the worklist rows. If two pipettes share a rack, it reports per rack instead.
 - Run records name the input file relative to the working folder, or by file name alone if it lies outside, so no home path lands in a record.
 - pytest's temporary folders go to `.labauto/pytest` (set in `tests/conftest.py`), so the suite writes nothing outside the repository. `test_tmp_path_is_inside_the_repository` pins this.
+
+## Stage 1b
+
+- The Tecan plate is `cor_96_wellplate_360uL_Fb`, not `Microplate_96_Well` as Appendix A suggests. The latter holds 1437 uL per well, so the tracker would not catch an overfill.
+- Tips: `DiTi_200ul_LiHa` for bulk and `DiTi_50ul_LiHa` for small transfers. The neutral keys `tips_200ul` and `tips_50ul` were added to `labware.py`.
+- Tecan pipettes are LiHa channels. The workcell's `mount` names the channel (`channel_0`, `channel_1`). The small pipette covers 1 to 50 uL, the large 20 to 200 uL.
+- The trash is placed at a fixed coordinate, because `EVO150Deck` has none and the deck only places Tecan resources on rails.
+- Added field `SimResult.well_volumes`: the plate volumes kept by the simulator's tracker, when it keeps them. The ledger check compares them with the plan's well totals. This is how "confirm the plate's tracked volumes equal the plan" is done.
+- The Tecan step log is one line per call the simulator accepted, written by this project. The chatterbox output is a table per call.
+- When a tip rack runs out, the compiled calls wrap to the first spot, so the tip tracker catches it when the workcell rules are skipped.
+- The demo table's first column is 29 characters wide, so `good_factorial (tecan_evo)` fits.
+- The Tecan row in the demo also checks that its plan equals the OT-2 plan for the same design. If they differ, the row says so and the demo fails.

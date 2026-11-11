@@ -81,6 +81,7 @@ def test_demo_prints_six_expected_rows(tmp_path, capsys):
     assert main(["demo", "--runs", str(tmp_path)]) == 0
     out = capsys.readouterr().out
     assert "UNEXPECTED" not in out
+    rows = [" ".join(line.split()) for line in out.splitlines()]
     for line in [
         "bad_off_grid             CAUGHT   design     FACTOR_OFF_GRID catalyst_mol_pct=2.2 (nearest 2.0, 2.5)",
         "bad_too_many_wells       CAUGHT   design     TOO_MANY_WELLS 120 needed, 92 available",
@@ -88,8 +89,8 @@ def test_demo_prints_six_expected_rows(tmp_path, capsys):
         "bad_overfill             CAUGHT   plan       WELL_OVERFILL plate:E1 600 uL, limit 250",
         "deck_conflict            CAUGHT   workcell   DECK_CONFLICT slot 2: plate, reservoir",
     ]:
-        assert line in out
-    assert "good_factorial           PASS                40 wells," in out
+        assert " ".join(line.split()) in rows
+    assert any(r.startswith("good_factorial PASS 40 wells,") for r in rows)
 
 
 def test_empty_plan_is_caught_not_a_crash(tmp_path):

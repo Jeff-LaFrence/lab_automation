@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 import time
@@ -126,11 +127,11 @@ STAGE1_CASES = [
 
 
 def table_row(case: str, result: str, layer: str, detail: str) -> str:
-    return f"{case:<25}{result:<9}{layer:<11}{detail}".rstrip()
+    return f"{case:<29}{result:<9}{layer:<11}{detail}".rstrip()
 
 
-def run_demo_case(case: DemoCase, assay: Assay, runs: str) -> tuple[str, bool, Path]:
-    """Run one demo case. Returns its table row, whether it matched, and its run folder."""
+def run_demo_case(case: DemoCase, assay: Assay, runs: str) -> tuple[str, bool, CheckResult]:
+    """Run one demo case. Returns its table row, whether it matched, and the check result."""
     workcell = load_workcell(case.workcell)
     data = load_json(case.file)
     run_dir = new_run_dir(runs)
@@ -150,7 +151,24 @@ def run_demo_case(case: DemoCase, assay: Assay, runs: str) -> tuple[str, bool, P
         )
     if not matched:
         row += "    (UNEXPECTED)"
-    return row, matched, run_dir
+    return row, matched, result
+
+
+def tecan_row(assay: Assay, runs: str, ot2_result: CheckResult | None) -> tuple[str, bool]:
+    """The second instrument row: the good design on the Tecan EVO workcell."""
+    name = "good_factorial (tecan_evo)"
+    if importlib.util.find_spec("pylabrobot") is None:
+        return table_row(name, "SKIPPED", "", "(pylabrobot not installed)"), True
+    case = DemoCase(
+        name, "examples/designs/good_factorial.json", "configs/workcell_tecan_evo.json", None
+    )
+    row, matched, result = run_demo_case(case, assay, runs)
+    if not matched:
+        return row, False
+    same = ot2_result is not None and ot2_result.plan == result.plan
+    if same:
+        return table_row(name, "PASS", "", "same plan, second instrument"), True
+    return table_row(name, "PASS", "", "plans differ between instruments    (UNEXPECTED)"), False
 
 
 def cmd_demo(args: argparse.Namespace) -> int:
@@ -160,10 +178,16 @@ def cmd_demo(args: argparse.Namespace) -> int:
     print()
     print(table_row("case", "result", "layer", "detail"))
     all_ok = True
+    good = None
     for case in STAGE1_CASES:
-        row, matched, _ = run_demo_case(case, assay, args.runs)
+        row, matched, result = run_demo_case(case, assay, args.runs)
+        if case.name == "good_factorial":
+            good = result
         all_ok &= matched
         print(row)
+    row, matched = tecan_row(assay, args.runs, good)
+    all_ok &= matched
+    print(row)
     print()
     print(f"Run folders are in {args.runs}/. Finished in {time.perf_counter() - start:.1f} s.")
     return EXIT_PASS if all_ok else EXIT_CAUGHT

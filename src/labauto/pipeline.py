@@ -87,6 +87,19 @@ def ledger_check(plan: Plan, sim: SimResult) -> list[PlanError]:
                     f"{plan.plate}:{well} {reagent} planned {fmt_precise(w)}, dispensed {fmt_precise(g)}",
                 )
             )
+    if sim.well_volumes is not None:
+        planned = {w.well: w.total_ul() for w in plan.wells if w.total_ul() > 0}
+        for well in sorted(set(planned) | set(sim.well_volumes), key=labware.column_order_key):
+            g, w = sim.well_volumes.get(well, 0.0), planned.get(well, 0.0)
+            if abs(g - w) > TOLERANCE:
+                errors.append(
+                    _mismatch(
+                        f"{plan.plate}:{well}:tracked",
+                        f"The plan fills {well} to {fmt_precise(w)} uL. The simulator's volume "
+                        f"tracker holds {fmt_precise(g)} uL there.",
+                        f"{plan.plate}:{well} planned {fmt_precise(w)}, tracked {fmt_precise(g)}",
+                    )
+                )
     by_reagent: dict[str, float] = defaultdict(float)
     for (_, reagent), v in got.items():
         by_reagent[reagent] += v
