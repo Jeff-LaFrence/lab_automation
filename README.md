@@ -301,14 +301,14 @@ Results, from `labauto eval-reviewer --trials 1` with the default prompt ([page]
 
 What these show:
 
-- The checks held. Code rejected 16 overwatch replies with the default prompt and 18 without hints, each for a number that was not in the evidence it cited. Every case still ended with a review that passed the checks.
+- The checks held. Code sent back 8 overwatch replies with the default prompt and 9 without hints, because they held numbers (16 and 18 in all) that were not in the part of the evidence the check allows. Every case still ended with a review that passed the checks. The check finds numbers that are not in the evidence; a made-up number that happens to equal a value there would pass.
 - With the hint section, the overwatch caught 3 of the 4 hard faults that the plain QC rules miss, with no false alarm. It missed the subtle impurity.
 - Without the hint section, it caught fewer faults than the plain QC rules (8 against 9) and raised 2 false alarms. On the plain LC/MS drift it still sent the plate back for a rerun, but it named the cause as an LC/MS and NMR disagreement, not a drift. So the gain on the hard cases came from the hints, which describe how those faults look.
 - Two simple plate statistics, with no model, caught all 13 faults. Pooled with them, the overwatch added no fault and no faulty well on these plates. Those statistics were set with the hard-case recipes known, so they are a strong baseline here.
 - On 120 more plates (10 more seeds per case, no model), the statistics catch 124 of 130 faults, but on the hard plates they name only 79 of 143 faulty wells. That is where a model could still add something. The overwatch has not run on those plates; it would take 10 times the model calls of the case table.
 - 12 cases with one trial each is a small test. One case more or less moves every count.
 
-So far the overwatch shows that a model's review can be held to the evidence. It has not shown that it finds more than fixed rules do.
+So far the overwatch shows that a model's review can be held to the numbers in the evidence. It has not shown that it finds more than fixed rules do.
 
 ## The planner and the ladder
 
@@ -357,12 +357,12 @@ Commands: `labauto plan "<request>"`, `labauto status <run>`, `labauto approve <
 
 ## Results
 
-Planner evaluation, from `labauto eval-planner --set <set> --trials 5` on local models served by Ollama on one 32 GB GPU. A test set is a list of requests with the right answer written down before any model saw them ([examples/testsets/](examples/testsets/)). "Valid" means the design passed every check. "Faithful" means a valid design is also what was asked: the request's values kept, needed changes declared with a reason. The paraphrase set rewords the five core requests; the held-out set has eleven new kinds of request, such as a reagent that runs out without being named.
+Planner evaluation, from `labauto eval-planner --set <set> --trials 5` on local models served by Ollama on one 32 GB GPU. A test set is a list of requests with the right answer written down before any model saw them ([examples/testsets/](examples/testsets/)). "Valid" means the design passed every check. "Faithful" means a valid design also keeps what was asked, judged by rules written for each request beforehand: the values, the controls, the replicates, and the number of wells. Whether a needed change was declared is a separate column on each page, which checks that the list of changes is not empty. The paraphrase set rewords the five core requests; the held-out set has eleven new kinds of request, such as a reagent that runs out without being named.
 
 | Set | Model | Trials | Valid first try | Valid after local repairs | Handed to person | Internal error | Faithful (of valid) |
 |---|---|---|---|---|---|---|---|
 | core, run 1 ([page](docs/planner_eval_core_first_run.md)) | qwen3.8:27b | 25 | 23 | 25 | 0 | 0 | not scored (page predates the score) |
-| core, run 2 ([page](docs/planner_eval.md)) | qwen3.8:27b | 25 | 17 | 23 | 1 | 1 | 21 of 23 |
+| core, run 2 ([page](docs/planner_eval_core_second_run.md)) | qwen3.8:27b | 25 | 17 | 23 | 1 | 1 | 21 of 23 |
 | paraphrase ([page](docs/planner_eval_paraphrase.md)) | qwen3.8:27b | 25 | 19 | 24 | 1 | 0 | 22 of 24 |
 | held-out ([page](docs/planner_eval_held_out.md)) | qwen3.8:27b | 55 | 44 | 53 | 2 | 0 | 53 of 53 |
 | core ([page](docs/planner_eval_qwen2.5-coder-32b.md)) | qwen2.5-coder:32b | 25 | 9 | 20 | 5 | 0 | not scored |
