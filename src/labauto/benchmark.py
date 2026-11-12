@@ -8,10 +8,16 @@ strategy on a seed.
 
 Fast path: the plan's volumes are taken as the ledger, and compile and
 simulate are skipped. The full path is what `labauto loop` runs.
+
+Model runs are recorded. Each model seed gets its own transcript,
+model/seed_NN.jsonl in the run folder. Running again with the same folder
+replays the calls recorded there and asks the model only for the rest.
+result.json in the same folder holds everything the page is built from.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import statistics
 import time
@@ -19,6 +25,7 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
+from labauto.agents.llm import Transcript
 from labauto.config import repo_root
 from labauto.decide.base import build_history, recommendation
 from labauto.decide.optimizer import OptimizerDecider, round_one
@@ -29,6 +36,70 @@ from labauto.models import Assay, Decision
 from labauto.virtual.ground_truth import grid_optimum, reference_expected, surface_for, true_yield
 
 NEAR = 3.0
+MIN_MODEL_SEEDS = 3
+
+
+class BenchmarkError(ValueError):
+    """A run folder that cannot be resumed with these settings."""
+
+
+class CountingTranscript(Transcript):
+    """A transcript that also counts the calls it served from lines recorded earlier."""
+
+    def __init__(self, path: Path | None):
+        super().__init__(path)
+        self.recorded_before = len(self.records)
+        self.replayed = 0
+
+    def lookup(self, meta: dict, call: int) -> dict | None:
+        rec = super().lookup(meta, call)
+        if rec is not None:
+            self.replayed += 1
+        return rec
+
+    @property
+    def fresh(self) -> int:
+        """Calls sent to the model in this run. Each one added a line."""
+        return len(self.records) - self.recorded_before
+
+
+def transcript_path(run_dir: Path, seed: int) -> Path:
+    """Where one model seed's calls are recorded: model/seed_NN.jsonl."""
+    return Path(run_dir) / "model" / f"seed_{seed:02d}.jsonl"
+
+
+def shown_path(path: str | Path) -> str:
+    """A folder as the page shows it: relative to the repository, or only its name when outside.
+
+    The page may be committed, so it never carries a home folder or other local path.
+    """
+    p = Path(path).resolve()
+    try:
+        return p.relative_to(repo_root().resolve()).as_posix()
+    except ValueError:
+        return f"<outside the repository>/{p.name}"
+
+
+def check_model_settings(run_dir: Path, settings: dict) -> None:
+    """Refuse to replay calls that were made for another surface or another model.
+
+    The first model run in a folder writes model/settings.json. A later run in
+    the same folder must match it, or its replayed replies would answer
+    questions that were never asked.
+    """
+    path = Path(run_dir) / "model" / "settings.json"
+    if path.exists():
+        old = json.loads(path.read_text(encoding="utf-8"))
+        for name, value in settings.items():
+            if name in old and old[name] != value:
+                raise BenchmarkError(
+                    f"{shown_path(run_dir)} holds model calls made with {name} "
+                    f"{json.dumps(old[name])}, but this run has {json.dumps(value)}. "
+                    "Use another --run-dir."
+                )
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
 
 
 def fast_campaign(
@@ -86,8 +157,12 @@ def fast_campaign(
     return scores
 
 
-def decider_for(strategy: str, assay: Assay, model_factory=None):
-    """A decide(history, n, seed) function for a strategy name."""
+def decider_for(strategy: str, assay: Assay, model_factory=None, transcript=None):
+    """A decide(history, n, seed) function for a strategy name.
+
+    For the model, model_factory(transcript) builds the decider, which records
+    its calls in that transcript. None when there is no model_factory.
+    """
     if strategy == "random":
         d = RandomDecider(assay)
     elif strategy == "optimizer":
@@ -95,7 +170,7 @@ def decider_for(strategy: str, assay: Assay, model_factory=None):
     elif strategy == "model":
         if model_factory is None:
             return None
-        d = model_factory()
+        d = model_factory(transcript)
     else:
         raise ValueError(f"unknown strategy '{strategy}'")
     return lambda history, n, seed: d.decide(history, n, "", seed)
@@ -110,11 +185,20 @@ def run_benchmark(
     model_factory=None,
     progress: Callable[[str], None] | None = None,
     surface_seed: int | None = None,
+    run_dir: Path | None = None,
+    command: str = "",
+    model_name: str | None = None,
 ) -> dict:
     """Score every strategy on every seed. Returns the raw scores and the optimum per seed.
 
     surface_seed holds the surface fixed for every seed, as in Appendix C's check.
+    model_factory(transcript) builds one model decider per seed, each with its
+    own transcript. With run_dir, those are run_dir/model/seed_NN.jsonl: calls
+    already recorded there are replayed, and only the rest go to the model.
+    The result is then also saved as run_dir/result.json.
     """
+    run_model = "model" in strategies and model_factory is not None
+    model_count = max(MIN_MODEL_SEEDS, model_seeds)
     out: dict = {
         "scores": {},
         "optimum": {},
@@ -122,36 +206,90 @@ def run_benchmark(
         "skipped": {},
         "fallbacks": {},
         "surface_seed": surface_seed,
+        "rounds": rounds,
+        "seeds": seeds,
+        "model_seeds": model_count,
+        "command": command,
+        "model_name": model_name,
+        "run_dir": None if run_dir is None else shown_path(run_dir),
     }
-    model_count = max(3, model_seeds) if "model" in strategies and model_factory is not None else 0
-    for seed in range(1, max(seeds, model_count) + 1):
+    if run_model and run_dir is not None:
+        check_model_settings(run_dir, {"surface_seed": surface_seed, "model": model_name})
+    for seed in range(1, max(seeds, model_count if run_model else 0) + 1):
         out["optimum"][seed] = grid_optimum(
             assay, surface_for(seed if surface_seed is None else surface_seed)
         )[0]
+    calls: dict[int, dict] = {}
     for strategy in strategies:
-        decide = decider_for(strategy, assay, model_factory)
-        if decide is None:
+        decide = None if strategy == "model" else decider_for(strategy, assay)
+        if strategy == "model" and not run_model:
             out["skipped"][strategy] = "no model endpoint configured; live results pending"
             continue
-        count = max(3, model_seeds) if strategy == "model" else seeds
+        count = model_count if strategy == "model" else seeds
         start = time.perf_counter()
         out["scores"][strategy] = {}
         stats: dict = {}
         for seed in range(1, count + 1):
+            transcript = None
+            if strategy == "model":
+                transcript = CountingTranscript(
+                    None if run_dir is None else transcript_path(run_dir, seed)
+                )
+                decide = decider_for(strategy, assay, model_factory, transcript)
             out["scores"][strategy][seed] = fast_campaign(
                 assay, decide, strategy, seed, rounds, surface_seed=surface_seed, stats=stats
             )
+            note = ""
+            if transcript is not None:
+                calls[seed] = {"fresh": transcript.fresh, "replayed": transcript.replayed}
+                note = f" ({transcript.fresh} model calls made, {transcript.replayed} replayed)"
             if progress:
-                progress(f"{strategy} seed {seed}: {out['scores'][strategy][seed][-1]:.1f}")
+                progress(f"{strategy} seed {seed}: {out['scores'][strategy][seed][-1]:.1f}{note}")
         out["seconds"][strategy] = round(time.perf_counter() - start, 1)
         out["fallbacks"][strategy] = (stats.get("fallbacks", 0), stats.get("decided", 0))
+    if "model" in out["scores"]:
+        out["model_calls"] = {
+            "fresh": sum(c["fresh"] for c in calls.values()),
+            "replayed": sum(c["replayed"] for c in calls.values()),
+            "by_seed": calls,
+        }
+    if run_dir is not None:
+        save_result(out, Path(run_dir) / "result.json")
     return out
 
 
-def summarize(result: dict, rounds: int) -> dict:
-    """Mean and sd of the recommendation's true yield, and the share within 3 points, per round."""
+def save_result(result: dict, path: Path) -> None:
+    """Write result.json. JSON keys are text, so seeds become strings here."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+
+
+def load_result(path: Path) -> dict:
+    """Read result.json back, with seeds as whole numbers again, as run_benchmark returns them."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    data["scores"] = {
+        strategy: {int(seed): scores for seed, scores in by_seed.items()}
+        for strategy, by_seed in data["scores"].items()
+    }
+    data["optimum"] = {int(seed): value for seed, value in data["optimum"].items()}
+    data["fallbacks"] = {s: tuple(pair) for s, pair in data.get("fallbacks", {}).items()}
+    if data.get("model_calls"):
+        by_seed = data["model_calls"].get("by_seed", {})
+        data["model_calls"]["by_seed"] = {int(seed): c for seed, c in by_seed.items()}
+    return data
+
+
+def summarize(result: dict, rounds: int, only: set[int] | None = None) -> dict:
+    """Mean and sd of the recommendation's true yield, and the share within 3 points, per round.
+
+    With only, each strategy is scored on those seeds alone.
+    """
     table = {}
     for strategy, by_seed in result["scores"].items():
+        if only is not None:
+            by_seed = {seed: scores for seed, scores in by_seed.items() if seed in only}
+        if not by_seed:
+            continue
         rows = []
         for r in range(rounds):
             vals = [scores[r] for scores in by_seed.values()]
@@ -165,6 +303,63 @@ def summarize(result: dict, rounds: int) -> dict:
             )
         table[strategy] = {"seeds": len(by_seed), "rounds": rows}
     return table
+
+
+def _table_lines(table: dict, rounds: int, level: str) -> list[str]:
+    """The two tables: mean true yield of the recommendation, and the share near the optimum."""
+    head = "| Strategy | Seeds | " + " | ".join(f"Round {r}" for r in range(1, rounds + 1)) + " |"
+    sep = "|---|---|" + "---|" * rounds
+    lines = [f"{level} Mean true yield of the recommendation (%)", "", head, sep]
+    for strategy, t in table.items():
+        lines.append(
+            f"| {strategy} | {t['seeds']} | "
+            + " | ".join(f"{x['mean']:.1f}" for x in t["rounds"])
+            + " |"
+        )
+    lines += ["", f"{level} Share of seeds within {NEAR:g} points of the optimum", "", head, sep]
+    for strategy, t in table.items():
+        lines.append(
+            f"| {strategy} | {t['seeds']} | "
+            + " | ".join(f"{x['share']:.2f}" for x in t["rounds"])
+            + " |"
+        )
+    return lines
+
+
+def _optimum_line(result: dict, count: int, mean_opt: float, these: str = "the") -> str:
+    if result.get("surface_seed") is None:
+        return f"Mean true optimum over {these} {count} surfaces: {mean_opt:.1f}%."
+    return f"True optimum of surface seed {result['surface_seed']}: {mean_opt:.1f}%."
+
+
+def _model_seeds_if_fewer(result: dict) -> list[int]:
+    """The model's seeds, when another strategy ran on more seeds than the model. Else empty."""
+    model = sorted(result["scores"].get("model", {}))
+    others = [len(b) for s, b in result["scores"].items() if s != "model"]
+    return model if model and any(n > len(model) for n in others) else []
+
+
+def _model_call_lines(result: dict) -> list[str]:
+    """Where the model's calls are, and how many were made in this run or replayed."""
+    calls = result.get("model_calls")
+    if not calls:
+        return []
+    fresh, replayed = calls["fresh"], calls["replayed"]
+    counts = f"Model calls: {fresh} made in this run, {replayed} replayed from an earlier run"
+    if result.get("run_dir"):
+        lines = [
+            f"- model: its calls are recorded in `{result['run_dir']}/model/`, one file per seed. "
+            f"{counts} in that folder."
+        ]
+    else:
+        lines = [f"- model: its calls were not saved, because no run folder was given. {counts}."]
+    if replayed:
+        lines.append(
+            f"- model: {replayed} of the {fresh + replayed} model calls were replayed, not sent "
+            "to the model in this run. Their replies were read from the files an earlier run "
+            "wrote, and the time above leaves them out."
+        )
+    return lines
 
 
 def write_outputs(
@@ -183,9 +378,8 @@ def write_outputs(
         statistics.fmean(result["optimum"][s] for s in seeds_in_plot) if seeds_in_plot else 0.0
     )
     plot(table, rounds, mean_opt, png_path)
+    model_seeds = _model_seeds_if_fewer(result)
 
-    head = "| Strategy | Seeds | " + " | ".join(f"Round {r}" for r in range(1, rounds + 1)) + " |"
-    sep = "|---|---|" + "---|" * rounds
     lines = [
         "# Closed loop benchmark",
         "",
@@ -207,35 +401,16 @@ def write_outputs(
         "",
         f"Command: `{command}`",
         "",
-        "## Mean true yield of the recommendation (%)",
-        "",
-        head,
-        sep,
     ]
-    for strategy, t in table.items():
-        lines.append(
-            f"| {strategy} | {t['seeds']} | "
-            + " | ".join(f"{x['mean']:.1f}" for x in t["rounds"])
-            + " |"
-        )
-    lines += ["", f"## Share of seeds within {NEAR:g} points of the optimum", "", head, sep]
-    for strategy, t in table.items():
-        lines.append(
-            f"| {strategy} | {t['seeds']} | "
-            + " | ".join(f"{x['share']:.2f}" for x in t["rounds"])
-            + " |"
-        )
-    lines += [
-        "",
-        (
-            f"Mean true optimum over the {len(seeds_in_plot)} surfaces: {mean_opt:.1f}%."
-            if result.get("surface_seed") is None
-            else f"True optimum of surface seed {result['surface_seed']}: {mean_opt:.1f}%."
-        ),
-        "",
-        f"![Benchmark]({os.path.relpath(png_path, md_path.parent)})",
-        "",
-    ]
+    lines += _table_lines(table, rounds, "##")
+    lines += ["", _optimum_line(result, len(seeds_in_plot), mean_opt), ""]
+    if model_seeds:
+        lines += [
+            f"The model ran on {len(model_seeds)} seeds and the others on more, so the tables "
+            'above do not compare them on the same seeds. See "On the model\'s seeds" below.',
+            "",
+        ]
+    lines += [f"![Benchmark]({os.path.relpath(png_path, md_path.parent)})", ""]
     for strategy, why in result["skipped"].items():
         lines.append(f"- {strategy}: not run, {why}.")
     for strategy, (fell, decided) in result.get("fallbacks", {}).items():
@@ -250,6 +425,21 @@ def write_outputs(
             )
     for strategy, secs in result["seconds"].items():
         lines.append(f"- {strategy}: {secs:.0f} s for {table[strategy]['seeds']} seeds.")
+    lines += _model_call_lines(result)
+    if model_seeds:
+        same = summarize(result, rounds, only=set(model_seeds))
+        same_opt = statistics.fmean(result["optimum"][s] for s in model_seeds)
+        lines += [
+            "",
+            "## On the model's seeds",
+            "",
+            f"These tables score every strategy on seeds {model_seeds[0]} to {model_seeds[-1]}, "
+            "the only seeds the model ran on, so compare the model with the others here and "
+            "not in the tables above.",
+            "",
+        ]
+        lines += _table_lines(same, rounds, "###")
+        lines += ["", _optimum_line(result, len(model_seeds), same_opt, "these")]
     lines += [
         "",
         f"Model: {model_name or 'none (no model strategy was run)'}  ",
@@ -259,6 +449,15 @@ def write_outputs(
     ]
     md_path.parent.mkdir(parents=True, exist_ok=True)
     md_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def line_labels(table: dict) -> dict[str, str]:
+    """The legend label of each line, with its seed count.
+
+    A model line on fewer seeds than the others reads, for example,
+    "model (10 seeds)" next to "optimizer (30 seeds)".
+    """
+    return {strategy: f"{strategy} ({t['seeds']} seeds)" for strategy, t in table.items()}
 
 
 def plot(table: dict, rounds: int, mean_opt: float, path: Path) -> None:
@@ -272,11 +471,12 @@ def plot(table: dict, rounds: int, mean_opt: float, path: Path) -> None:
     x = list(range(1, rounds + 1))
     fig, ax = plt.subplots(figsize=(7, 4.2), dpi=120)
     colors = {"random": "#7a7a7a", "optimizer": "#1f6fb4", "model": "#c4572a"}
+    labels = line_labels(table)
     for strategy, t in table.items():
         mean = [r["mean"] for r in t["rounds"]]
         sd = [r["sd"] for r in t["rounds"]]
         color = colors.get(strategy, "#333333")
-        ax.plot(x, mean, marker="o", color=color, label=f"{strategy} ({t['seeds']} seeds)")
+        ax.plot(x, mean, marker="o", color=color, label=labels[strategy])
         ax.fill_between(
             x,
             [m - s for m, s in zip(mean, sd, strict=True)],

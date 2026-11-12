@@ -282,8 +282,8 @@ def test_empty_and_invented_notes_are_rejected_with_the_right_reason(tmp_path):
 def test_benchmark_counts_model_fallbacks_and_handles_more_model_seeds(tmp_path, assay):
     from labauto.benchmark import run_benchmark, write_outputs
 
-    def factory():
-        return ModelDecider(assay, ScriptedClient(["not json"] * 200))
+    def factory(transcript):
+        return ModelDecider(assay, ScriptedClient(["not json"] * 200), transcript=transcript)
 
     result = run_benchmark(
         assay, ["random", "model"], seeds=2, model_seeds=3, rounds=2, model_factory=factory

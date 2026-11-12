@@ -135,10 +135,12 @@ def cmd_report(args: argparse.Namespace) -> int:
 
 
 def cmd_benchmark(args: argparse.Namespace) -> int:
-    from labauto.benchmark import run_benchmark, write_outputs
+    from labauto.agents.llm import EndpointUnavailable
+    from labauto.benchmark import BenchmarkError, run_benchmark, shown_path, write_outputs
     from labauto.cli_plan import ConfigError, make_clients
     from labauto.config import load_settings
     from labauto.planner_eval import git_commit
+    from labauto.record import utc_stamp
 
     assay = load_assay(DEFAULT_ASSAY)
     strategies = [s.strip() for s in args.strategies.split(",") if s.strip()]
@@ -147,7 +149,7 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
     if "model" in strategies:
         settings = load_settings()
         try:
-            make_clients("live", settings)
+            clients = make_clients("live", settings)
         except ConfigError:
             print(
                 "No model endpoint is configured, so the model strategy is skipped. Live results are pending."
@@ -156,19 +158,20 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
             from labauto.decide.model_decider import ModelDecider
 
             model_name = settings.main.model if settings.main else None
-            model_factory = lambda: ModelDecider(assay, make_clients("live", settings).local)  # noqa: E731
+
+            def model_factory(transcript):
+                return ModelDecider(assay, clients.local, transcript=transcript)
+
+    run_dir = Path(args.run_dir) if args.run_dir else Path("runs") / "benchmark" / utc_stamp()
+    print(f"Run folder: {run_dir}")
+    if run_dir.exists() and model_factory is not None:
+        print(
+            "That folder exists, so this run resumes it: model calls recorded there are replayed,"
+            " and only the rest go to the model."
+        )
+    print(f"To resume after a stop, run the same command with --run-dir {run_dir}")
     print(
         "Benchmark on the fast path: plan volumes stand in for the ledger; compile and simulate are skipped."
-    )
-    result = run_benchmark(
-        assay,
-        strategies,
-        seeds=args.seeds,
-        model_seeds=args.model_seeds,
-        rounds=args.rounds,
-        model_factory=model_factory,
-        progress=print if args.verbose else None,
-        surface_seed=args.surface_seed,
     )
     command = "labauto benchmark " + " ".join(
         [
@@ -180,11 +183,34 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
         + ([f"--surface-seed {args.surface_seed}"] if args.surface_seed is not None else [])
         + ([f"--out {args.out}"] if args.out != "docs/benchmark.md" else [])
         + ([f"--png {args.png}"] if args.png != "docs/img/benchmark.png" else [])
+        + ([f"--run-dir {shown_path(run_dir)}"] if args.run_dir else [])
     )
+    try:
+        result = run_benchmark(
+            assay,
+            strategies,
+            seeds=args.seeds,
+            model_seeds=args.model_seeds,
+            rounds=args.rounds,
+            model_factory=model_factory,
+            progress=print if args.verbose else None,
+            surface_seed=args.surface_seed,
+            run_dir=run_dir,
+            command=command,
+            model_name=model_name,
+        )
+    except BenchmarkError as exc:
+        print(f"error: {exc}")
+        return EXIT_FAILED
+    except EndpointUnavailable as exc:
+        print(f"error: {exc}")
+        print(f"The model calls made so far are saved in {run_dir / 'model'}.")
+        print(f"To go on from there, run the same command with --run-dir {run_dir}")
+        return EXIT_FAILED
     write_outputs(
         result, args.rounds, command, Path(args.out), Path(args.png), model_name, git_commit()
     )
-    print(f"Wrote {args.out} and {args.png}")
+    print(f"Wrote {args.out} and {args.png}, from {run_dir / 'result.json'}")
     return EXIT_DONE
 
 
@@ -286,6 +312,12 @@ def add_parsers(sub) -> None:
     )
     p.add_argument("--out", default="docs/benchmark.md")
     p.add_argument("--png", default="docs/img/benchmark.png")
+    p.add_argument(
+        "--run-dir",
+        default=None,
+        help="folder for result.json and the model's calls (default runs/benchmark/<UTC time>); "
+        "an existing folder is resumed",
+    )
     p.add_argument("--verbose", action="store_true")
     p.set_defaults(func=cmd_benchmark)
 
