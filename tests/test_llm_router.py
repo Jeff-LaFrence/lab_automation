@@ -18,6 +18,8 @@ from labauto.agents.llm import (
     Transcript,
     chat,
     extract_json,
+    schema_hash,
+    wire_schema,
 )
 from labauto.agents.router import estimate_tokens, route
 from labauto.config import Endpoint, Settings, load_settings
@@ -188,7 +190,14 @@ def test_live_client_probes_structured_output(structured_ok, tmp_path):
         assert [m["role"] for m in final["messages"]] == ["system", "user"]
     text = (tmp_path / "transcript.jsonl").read_text()
     assert "mock.invalid" not in text and "secret-key" not in text
-    assert json.loads(text.splitlines()[0])["reasoning"] == "thought"
+    rec = json.loads(text.splitlines()[0])
+    assert rec["reasoning"] == "thought"
+    # The transcript names the schema sent, even when the server enforced it
+    # and the messages do not carry it.
+    sent = wire_schema(PlannerOutput.model_json_schema())
+    assert rec["schema_hash"] == schema_hash(sent)
+    if structured_ok:
+        assert schema_hash(final["response_format"]["json_schema"]["schema"]) == rec["schema_hash"]
 
 
 def test_live_client_check_server_reports_without_hostnames():

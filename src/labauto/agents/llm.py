@@ -288,6 +288,7 @@ def chat(
                         else None
                     ),
                     "messages": raw.sent_messages if raw.sent_messages is not None else convo,
+                    "schema_hash": schema_hash(json_schema),
                     "raw": raw.text,
                     "stop_reason": raw.stop_reason,
                     "reasoning": raw.reasoning,
@@ -347,6 +348,19 @@ def wire_schema(schema: dict) -> dict:
 
     walk(out)
     return out
+
+
+def schema_hash(schema: dict | None) -> str | None:
+    """A short name for a reply schema: the first 12 hex characters of its sha256.
+
+    Each transcript line keeps it. When the server enforces the schema, the
+    schema is not in the messages, so without it a recording could not show
+    which schema the model wrote under. Key order is kept, since a server
+    may build its grammar in that order. None means no schema was sent.
+    """
+    if schema is None:
+        return None
+    return hashlib.sha256(json.dumps(schema).encode("utf-8")).hexdigest()[:12]
 
 
 def schema_instruction(schema: dict) -> str:
