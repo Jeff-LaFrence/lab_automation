@@ -10,7 +10,7 @@ All data are synthetic. The plates and their true fault logs come from the simul
 
 The overwatch reviewed 120 of 120 plates in the sweep. Every column below is computed on exactly the reviewed plates, so all five reviewers are compared on the same plates.
 
-Overwatch prompt: default (`src/labauto/agents/prompts/data_reviewer.md`). This prompt lists fault signatures, and some of them resemble how the hard cases were built. So a gain on the hard plates may come from those hints. `labauto eval-reviewer-sweep <source> --prompt no_hints` reviews the same plates with the prompt that drops them.
+Overwatch prompt: default (`src/labauto/agents/prompts/data_reviewer.md`). This prompt lists fault signatures, and some of them resemble how the hard cases were built. So a gain on the hard plates may come from those hints. `labauto eval-reviewer-sweep <source> --prompt no_hints` reviews the same plates with the prompt that drops them and writes `docs/reviewer_sweep_no_hints.md`. Compare the two pages before reading a gain on the hard plates as the model's own.
 
 ## What pooling added
 

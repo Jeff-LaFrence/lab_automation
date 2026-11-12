@@ -528,7 +528,8 @@ def prompt_note(prompt: str) -> str:
         f"Overwatch prompt: {prompt} ({where}). This prompt lists fault signatures, and some of "
         "them resemble how the hard cases were built. So a gain on the hard plates may come from "
         f"those hints. `{COMMAND} <source> --prompt no_hints` reviews the same plates with the "
-        "prompt that drops them."
+        f"prompt that drops them and writes `{SWEEP_OUTS['no_hints']}`. Compare the two pages "
+        "before reading a gain on the hard plates as the model's own."
     )
 
 
