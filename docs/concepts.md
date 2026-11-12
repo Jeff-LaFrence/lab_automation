@@ -155,15 +155,18 @@ design, plan, and worklist layers and the approval gate would stay as they are.
 
 ### Did the model decider beat the optimizer, and what does that say?
 
-Not across many surfaces yet. The benchmark ([benchmark.md](benchmark.md))
-has so far run the random and optimizer strategies; its model row is pending.
-Over 30 synthetic surfaces, the optimizer's recommendation after 6 rounds
-averaged 81.8% true yield against a mean optimum of 82.3%, and was within 3
-points of the optimum on a share of 1.00 of the surfaces. Random search reached
-76.9% and a share of 0.37. Those are the numbers a model decider has to beat.
+No. The benchmark ([benchmark.md](benchmark.md)) ran it on qwen3.8:27b on 10
+synthetic surfaces, and the optimizer and random search on the same 10. After
+6 rounds the model's recommendation averaged 81.2% true yield, the optimizer's
+81.0%, and random search's 78.1%, against a mean optimum of 81.7%. The model was
+a little ahead in rounds 2 to 4. It ended within 3 points of the optimum on 9
+of 10 surfaces, the optimizer on 10 of 10. 2 of its 50 rounds fell back to the
+optimizer's picks. So the model, given the optimizer as a tool, chose about as
+well as the optimizer alone: it started slightly faster and did not finish
+better. Ten surfaces can show only large differences.
 
-The model decider has run live once, on qwen3.8:27b through Ollama: one 6-round
-campaign on surface seed 0. It chose rounds 2 to 6 with no fallback. In round
+Before the benchmark, the model decider ran live in one 6-round campaign on
+surface seed 0. It chose rounds 2 to 6 with no fallback. In round
 6, code refused its first two final answers because they repeated too many
 tested conditions, and the third passed. It recommended catalyst 6.5 mol %,
 base 1.75 equiv, co-solvent 20 %, measured at 86.6% over 9 wells, which is the
@@ -171,5 +174,4 @@ surface's grid optimum. One campaign on one surface is an example, not a
 comparison. Its calls are in `examples/recordings/decider.jsonl`. The demo
 replays rounds 2 and 3 from it, and
 `labauto loop --strategy model --approval auto_demo --rounds 6 --seed 1 --surface-seed 0 --client replay:examples/recordings/decider.jsonl`
-replays all six rounds. The fallback to the optimizer has been shown only by
-tests with scripted replies.
+replays all six rounds.

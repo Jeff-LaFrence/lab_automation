@@ -351,7 +351,7 @@ Commands: `labauto plan "<request>"`, `labauto status <run>`, `labauto approve <
 | NMR readout and spectrum evaluator | simulated, synthetic spectra; the evaluator is classical least squares, tested on synthetic spectra only ([docs/nmr.md](docs/nmr.md)) |
 | Pairing and data reviewer (overwatch) | built and tested; run live on qwen3.8:27b on 12 synthetic fault cases, one trial each, with and without its hint section; it caught 12 and 8 of 13 faults, and two fixed statistics rules caught 13 ([results](#paired-lcms-and-nmr-and-a-data-reviewer)) |
 | Closed loop | built, simulated |
-| Model decider, report model note | built and tested; run live once on qwen3.8:27b (one 6-round campaign, replayed in the demo); the benchmark's model rows are pending |
+| Model decider, report model note | built and tested; run live on qwen3.8:27b in one 6-round campaign (replayed in the demo) and in the benchmark on 10 surfaces, where it did not beat the optimizer |
 | Service API, skill library | not built |
 | Real hardware, LIMS or ELN, cluster deployment | not built |
 
@@ -382,25 +382,41 @@ What these show:
 - Before that change, the most common wrong factor name was `encoding`: the model's reasoning named the factor correctly (`base_equiv`), but the JSON it returned under the server's grammar named it `encoding`. The checks caught it every time. The repair fixed it in 4 of the 8 trials where it happened. In the other 4, the model repeated the same names and the run went to a person; those are all 4 qwen3.8:27b hand-offs in the generic rows. The schema sent to the server now lists the assay's factor names (`reply_schema` in `src/labauto/agents/planner.py`), so the grammar no longer allows another key.
 - Faithful catches what valid does not: scenario 04 ("around our usual conditions") is the one request the model still gets wrong while passing every check. It screened base levels without the usual 1.5 equiv in 2 of 5 trials in each generic run, and in 1 of 5 in each run with factor names.
 
-Closed loop benchmark, from `labauto benchmark --strategies random,optimizer,model --seeds 30 --model-seeds 3 --rounds 6` ([docs/benchmark.md](docs/benchmark.md)). Each of 30 seeds is a different synthetic surface. The score is the true yield of each round's recommendation. This run used the fast path: the plan's volumes stand in for the simulator's ledger.
+Closed loop benchmark, from `labauto benchmark --strategies random,optimizer,model --seeds 30 --model-seeds 10 --rounds 6 --run-dir runs/benchmark/live` ([docs/benchmark.md](docs/benchmark.md)). Each seed is a different synthetic surface. After each round, the recommendation is the tested condition with the highest measured mean, and it is scored by its true yield. This run used the fast path: the plan's volumes stand in for the simulator's ledger. Random and the optimizer ran on 30 surfaces. The model decider (qwen3.8:27b) ran on the first 10, because each of its rounds takes model time.
 
 ![Benchmark](docs/img/benchmark.png)
 
-Mean true yield of the recommendation (%):
+Over all 30 surfaces, random and the optimizer. Mean true yield of the recommendation (%), and below it the share of surfaces within 3 points of the optimum:
 
 | Strategy | Seeds | Round 1 | Round 2 | Round 3 | Round 4 | Round 5 | Round 6 |
 |---|---|---|---|---|---|---|---|
 | random | 30 | 59.7 | 64.5 | 68.5 | 71.7 | 73.7 | 76.9 |
-| optimizer | 30 | 59.7 | 66.7 | 74.6 | 81.0 | 81.7 | 81.8 |
-
-Share of seeds within 3 points of the optimum:
+| optimizer | 30 | 59.7 | 67.0 | 74.8 | 80.6 | 81.8 | 81.6 |
 
 | Strategy | Seeds | Round 1 | Round 2 | Round 3 | Round 4 | Round 5 | Round 6 |
 |---|---|---|---|---|---|---|---|
 | random | 30 | 0.07 | 0.17 | 0.20 | 0.30 | 0.30 | 0.37 |
-| optimizer | 30 | 0.07 | 0.27 | 0.43 | 0.80 | 0.97 | 1.00 |
+| optimizer | 30 | 0.07 | 0.27 | 0.47 | 0.73 | 1.00 | 1.00 |
 
-Mean true optimum over the 30 surfaces: 82.3%. On these surfaces the optimizer found a near optimal condition on every seed by round 6, and random search did on about a third. The model decider has not been run in the benchmark yet, so the model rows are pending (it needs about an hour of GPU time for the minimum 3 seeds). A check against the reference numbers in SPEC.md Appendix C, which hold the surface fixed, is in [docs/benchmark_check.md](docs/benchmark_check.md) (`labauto benchmark --strategies random,optimizer --seeds 12 --model-seeds 3 --rounds 6 --surface-seed 0 --out docs/benchmark_check.md --png docs/img/benchmark_check.png`).
+Mean true optimum over the 30 surfaces: 82.3%. The optimizer found a near optimal condition on every surface by round 5. Random search did on about a third by round 6.
+
+On the 10 surfaces the model ran on, all three strategies. Mean true yield (%), then the share within 3 points:
+
+| Strategy | Seeds | Round 1 | Round 2 | Round 3 | Round 4 | Round 5 | Round 6 |
+|---|---|---|---|---|---|---|---|
+| random | 10 | 69.2 | 70.1 | 71.9 | 74.4 | 74.4 | 78.1 |
+| optimizer | 10 | 69.2 | 73.9 | 78.3 | 80.2 | 81.5 | 81.0 |
+| model | 10 | 69.2 | 75.1 | 79.9 | 80.6 | 80.8 | 81.2 |
+
+| Strategy | Seeds | Round 1 | Round 2 | Round 3 | Round 4 | Round 5 | Round 6 |
+|---|---|---|---|---|---|---|---|
+| random | 10 | 0.20 | 0.30 | 0.30 | 0.40 | 0.40 | 0.60 |
+| optimizer | 10 | 0.20 | 0.60 | 0.80 | 0.80 | 1.00 | 1.00 |
+| model | 10 | 0.20 | 0.60 | 0.80 | 0.90 | 0.90 | 0.90 |
+
+Mean true optimum over these 10 surfaces: 81.7%. The model decider did not beat the optimizer. Its recommendation was a little better in rounds 2 to 4 and about the same after round 6 (81.2% against 81.0%), and it ended within 3 points of the optimum on 9 of 10 surfaces against 10 of 10. What it added is a slightly faster start; what it did not add is a better final pick. 2 of its 50 rounds fell back to the optimizer's picks. Ten surfaces can show only large differences, and none of these is large.
+
+A check against the reference numbers in SPEC.md Appendix C, which hold the surface fixed, is in [docs/benchmark_check.md](docs/benchmark_check.md) (`labauto benchmark --strategies random,optimizer --seeds 12 --model-seeds 3 --rounds 6 --surface-seed 0 --out docs/benchmark_check.md --png docs/img/benchmark_check.png`).
 
 ## Plug in your own
 
@@ -444,7 +460,7 @@ Nothing upstream changes: the design, plan, and worklist are vendor neutral.
 - The Opentrons simulator does not catch an overfilled well, a volume below a pipette's minimum, or a source well drawn dry. Rules in this repository catch those. See [docs/tooling_notes.md](docs/tooling_notes.md).
 - Plates and tips are assumed fresh each round, and reagents topped up between rounds.
 - No scheduler, no multi-instrument coordination, no sample tracking system.
-- Results depend on the model. The planner evaluation covers two local models (the second on the core set only), three test sets, and 5 trials per request; the model decider ran live in one campaign. The test sets were drafted by the same AI assistant that built the planner and reviewed by the owner; a test set written by someone outside would be a stronger test.
+- Results depend on the model. The planner evaluation covers two local models (the second on the core set only), three test sets, and 5 trials per request; the model decider ran live in one campaign and on 10 benchmark surfaces. The test sets were drafted by the same AI assistant that built the planner and reviewed by the owner; a test set written by someone outside would be a stronger test.
 - The NMR spectra are synthetic, and the fitter models them with the same line shapes the simulator uses, so its accuracy is a lower bound on what real spectra would give. The data reviewer evaluation has 12 fault cases, each on one seed with one model trial. The model has not run on the 120 extra plates the fixed rules were scored on.
 
 ## What real hardware would add
