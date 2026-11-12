@@ -13,22 +13,22 @@ Command: `labauto benchmark --strategies random,optimizer --seeds 12 --model-see
 | Strategy | Seeds | Round 1 | Round 2 | Round 3 | Round 4 | Round 5 | Round 6 |
 |---|---|---|---|---|---|---|---|
 | random | 12 | 71.8 | 74.3 | 77.7 | 77.4 | 79.2 | 80.9 |
-| optimizer | 12 | 71.8 | 74.4 | 80.3 | 84.6 | 85.2 | 85.9 |
+| optimizer | 12 | 71.8 | 75.2 | 80.9 | 85.1 | 85.4 | 85.7 |
 
 ## Share of seeds within 3 points of the optimum
 
 | Strategy | Seeds | Round 1 | Round 2 | Round 3 | Round 4 | Round 5 | Round 6 |
 |---|---|---|---|---|---|---|---|
 | random | 12 | 0.08 | 0.17 | 0.25 | 0.25 | 0.33 | 0.42 |
-| optimizer | 12 | 0.08 | 0.08 | 0.33 | 0.83 | 0.83 | 1.00 |
+| optimizer | 12 | 0.08 | 0.08 | 0.42 | 0.92 | 0.92 | 1.00 |
 
 True optimum of surface seed 0: 86.0%.
 
 ![Benchmark](img/benchmark_check.png)
 
 - random: 0 s for 12 seeds.
-- optimizer: 50 s for 12 seeds.
+- optimizer: 120 s for 12 seeds.
 
 Model: none (no model strategy was run)  
-Date: 2026-11-11  
-Git commit: b306dfd
+Date: 2026-11-12  
+Git commit: v0.3-closed-loop-25-gacb91a5
