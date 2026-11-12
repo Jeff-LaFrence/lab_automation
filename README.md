@@ -361,20 +361,26 @@ The commands that make the results pages (`eval-planner`, `eval-reviewer`, `nmr-
 
 Planner evaluation, from `labauto eval-planner --set <set> --trials 5` on local models served by Ollama on one 32 GB GPU. A test set is a list of requests with the right answer written down before any model saw them ([examples/testsets/](examples/testsets/)). "Valid" means the design passed every check. "Faithful" means a valid design also keeps what was asked, judged by rules written for each request beforehand: the values, the controls, the replicates, and the number of wells. Whether a needed change was declared is a separate column on each page, which checks that the list of changes is not empty. The paraphrase set rewords the five core requests; the held-out set has eleven new kinds of request, such as a reagent that runs out without being named.
 
-| Set | Model | Trials | Valid first try | Valid after local repairs | Handed to person | Internal error | Faithful (of valid) |
-|---|---|---|---|---|---|---|---|
-| core, run 1 ([page](docs/planner_eval_core_first_run.md)) | qwen3.8:27b | 25 | 23 | 25 | 0 | 0 | not scored (page predates the score) |
-| core, run 2 ([page](docs/planner_eval_core_second_run.md)) | qwen3.8:27b | 25 | 17 | 23 | 1 | 1 | 21 of 23 |
-| paraphrase ([page](docs/planner_eval_paraphrase.md)) | qwen3.8:27b | 25 | 19 | 24 | 1 | 0 | 22 of 24 |
-| held-out ([page](docs/planner_eval_held_out.md)) | qwen3.8:27b | 55 | 44 | 53 | 2 | 0 | 53 of 53 |
-| core ([page](docs/planner_eval_qwen2.5-coder-32b.md)) | qwen2.5-coder:32b | 25 | 9 | 20 | 5 | 0 | not scored |
+| Set | Model | Reply schema | Trials | Valid first try | Valid after local repairs | Handed to person | Internal error | Faithful (of valid) |
+|---|---|---|---|---|---|---|---|---|
+| core, run 1 ([page](docs/planner_eval_core_first_run.md)) | qwen3.8:27b | generic | 25 | 23 | 25 | 0 | 0 | not scored (page predates the score) |
+| core, run 2 ([page](docs/planner_eval_core_second_run.md)) | qwen3.8:27b | generic | 25 | 17 | 23 | 1 | 1 | 21 of 23 |
+| paraphrase, run 1 ([page](docs/planner_eval_paraphrase_first_run.md)) | qwen3.8:27b | generic | 25 | 19 | 24 | 1 | 0 | 22 of 24 |
+| held-out, run 1 ([page](docs/planner_eval_held_out_first_run.md)) | qwen3.8:27b | generic | 55 | 44 | 53 | 2 | 0 | 53 of 53 |
+| core ([page](docs/planner_eval_qwen2.5-coder-32b.md)) | qwen2.5-coder:32b | generic | 25 | 9 | 20 | 5 | 0 | not scored |
+| core, run 3 ([page](docs/planner_eval.md)) | qwen3.8:27b | factor names | 25 | 23 | 25 | 0 | 0 | 24 of 25 |
+| paraphrase, run 2 ([page](docs/planner_eval_paraphrase.md)) | qwen3.8:27b | factor names | 25 | 22 | 25 | 0 | 0 | 24 of 25 |
+| held-out, run 2 ([page](docs/planner_eval_held_out.md)) | qwen3.8:27b | factor names | 55 | 45 | 55 | 0 | 0 | 55 of 55 |
+
+"Generic" is the reply schema the first runs sent to the server, which let the factor map hold any key. "Factor names" lists the assay's factors as the only keys (see below).
 
 What these show:
 
 - qwen3.8:27b, a general model that reasons before it answers, did much better than qwen2.5-coder:32b, which never solved scenario 05. It is also slower: by median seconds it takes 2 to 6 times as long per request, and 3 to 4 times as long over the five core requests together.
 - The same planner prompt and checks on the same model gave 23 and then 17 valid first tries on the core set. The second run overlapped heavy CPU work on the same machine, which slowed generation to as low as 16 tokens a second; one long reply hit the 600 second client timeout and is counted as an internal error. Five trials per request show large differences, not small ones.
-- The most common wrong factor name: the model's reasoning names a factor correctly (`base_equiv`), but the JSON it returns under the server's grammar names it `encoding`. The checks caught it every time. The repair fixed it in 4 of the 8 trials where it happened. In the other 4, the model repeated the same names and the run went to a person; those are all 4 qwen3.8:27b hand-offs in the table above. The runs above were made before the schema sent to the server listed the assay's factor names. It does now (`reply_schema` in `src/labauto/agents/planner.py`), and in the core set run since, neither UNKNOWN_FACTOR nor MISSING_FACTOR appeared ([docs/planner_eval.md](docs/planner_eval.md)). The paraphrase and held-out sets have not been run again with it yet.
-- Faithful catches what valid does not: in 2 of 5 trials of scenario 04 ("around our usual conditions"), and again in the paraphrase, the model screened base levels without the usual 1.5 equiv.
+- With the factor names in the reply schema, all 105 trials across the three sets ended in a valid design after local repairs, none went to a person, and no wrong factor name appeared. Every first-try miss left was a shortfall the request was built to cause (a reagent or tips running short, as in 05, p05, h09 and h10), and the model planned around it once the checks named it.
+- Before that change, the most common wrong factor name was `encoding`: the model's reasoning named the factor correctly (`base_equiv`), but the JSON it returned under the server's grammar named it `encoding`. The checks caught it every time. The repair fixed it in 4 of the 8 trials where it happened. In the other 4, the model repeated the same names and the run went to a person; those are all 4 qwen3.8:27b hand-offs in the generic rows. The schema sent to the server now lists the assay's factor names (`reply_schema` in `src/labauto/agents/planner.py`), so the grammar no longer allows another key.
+- Faithful catches what valid does not: scenario 04 ("around our usual conditions") is the one request the model still gets wrong while passing every check. It screened base levels without the usual 1.5 equiv in 2 of 5 trials in each generic run, and in 1 of 5 in each run with factor names.
 
 Closed loop benchmark, from `labauto benchmark --strategies random,optimizer,model --seeds 30 --model-seeds 3 --rounds 6` ([docs/benchmark.md](docs/benchmark.md)). Each of 30 seeds is a different synthetic surface. The score is the true yield of each round's recommendation. This run used the fast path: the plan's volumes stand in for the simulator's ledger.
 
