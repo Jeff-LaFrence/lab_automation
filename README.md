@@ -98,14 +98,14 @@ Run folders are in runs/. Finished in 18.2 s.
 
 In the first table, each row is one input sent through the check pipeline. The Tecan row sends the same design to a second workcell, a Tecan EVO, and confirms the plan is identical: only the instrument backend changes. Every failure is caught at a named layer, with the numbers that explain it. The run folders land in `runs/`. One of them is committed as [examples/sample_run/](examples/sample_run/).
 
-The second table replays three planner sessions recorded live on qwen3.8:27b, a local model served by Ollama. Each is trial 1 of the planner evaluation for that scenario, taken by that rule and not picked. Everything after each reply (the checks, the repair prompts, the ladder, the approval summary) is the real code. In 02 the model's first JSON misnamed two factors; the checks caught it and the repair passed. The scripted sessions used before any model was available are kept as `examples/recordings/*.scripted.jsonl`. The last table replays a live qwen3.8:27b model decider session with the same seeds. `labauto demo --live` runs the planner scenarios against the configured endpoint. `tests/test_live_recordings.py` checks that each recording comes from a model, holds nothing private, and replays to the same result.
+The second table replays three planner sessions recorded live on qwen3.8:27b, a local model served by Ollama. Each is trial 1 of the first core evaluation run for that scenario, taken by that rule and not picked. Everything after each reply (the checks, the repair prompts, the ladder, the approval summary) is the real code. In 02 the model's first JSON misnamed two factors; the checks caught it and the repair passed. The scripted sessions used before any model was available are kept as `examples/recordings/*.scripted.jsonl`. The last table replays a live qwen3.8:27b model decider session with the same seeds. `labauto demo --live` runs the planner scenarios against the configured endpoint. `tests/test_live_recordings.py` checks that each recording comes from a model, holds nothing private, and replays to the same result.
 
 ## How a bad plan gets caught
 
 One request, start to finish. The planner replies here are scripted, written by hand (`examples/scripted/02_too_big.json`). The errors, the repair prompt, and the summary are produced by the code. Command:
 
 ```
-labauto plan --request-file examples/requests/02_too_big.txt --client scripted:examples/scripted/02_too_big.json
+labauto plan --request-file examples/requests/02_too_big.txt --client scripted:examples/scripted/02_too_big.json --runs runs/readme02
 ```
 
 The request asks for 40 conditions in triplicate. The planner's first design keeps all of it. The design rules stop it, and this is `attempts/01_local/errors.json`:
@@ -172,7 +172,7 @@ Below that, the summary lists what would be run, reagent use, tips, and each che
 
 ### The same request on a local model
 
-This is a live run of the same request on qwen3.8:27b served by Ollama: trial 1 of the planner evaluation, not picked for the example. The model did the arithmetic right on its first try and cut to 2 replicates. But the JSON it returned named two factors `encoding` and `encoding_pct`. Its own reasoning, recorded in the transcript, used the right names, `base_equiv` and `cosolvent_pct`. The design rules caught the slip as `UNKNOWN_FACTOR` and `MISSING_FACTOR`, the errors went back, and the second attempt passed. The top of its `summary.md`:
+This is a live run of the same request on qwen3.8:27b served by Ollama: trial 1 of the first core evaluation run, not picked for the example. It ran before the schema sent to the server listed the assay's factor names. The model did the arithmetic right on its first try and cut to 2 replicates. But the JSON it returned named two factors `encoding` and `encoding_pct`. Its own reasoning, recorded in the transcript, used the right names, `base_equiv` and `cosolvent_pct`. The design rules caught the slip as `UNKNOWN_FACTOR` and `MISSING_FACTOR`, the errors went back, and the second attempt passed. The top of its `summary.md`:
 
 ```
 # Run 20261111T172718Z_f197: AWAITING_APPROVAL
@@ -223,7 +223,7 @@ same and nothing unusual happened; a failed plate or a decider fallback sends
 the next round back to a person. The plate and tips are assumed fresh each
 round, and reagents topped up.
 
-A campaign report excerpt, from `labauto loop --strategy optimizer --approval auto_demo` (6 rounds, full path):
+A campaign report excerpt, from `labauto loop --strategy optimizer --approval auto_demo --brief "Find the condition with the highest yield."` (6 rounds, full path):
 
 - brief: Find the condition with the highest yield.
 - strategy: optimizer; rounds: 6; conditions per round: 8; replicates: 3
@@ -280,7 +280,7 @@ flowchart LR
     OW --> CHK{{"Code checks every claim<br/>cited paths, numbers, rules"}}
 ```
 
-1. A purpose-built evaluator reads each spectrum. Here it is a classical least squares lineshape fit behind a small interface, so a trained model can take its place. On synthetic spectra ([docs/nmr.md](docs/nmr.md), `labauto nmr-check`), its mean error is 0.29 points of yield on clean spectra against 1.37 for plain integration with a phase correction, 0.54 against 3.83 when the lines are broadened by a poor shim, and 0.27 against 1.42 with a 15 degree phase error. It takes about 30 ms a spectrum.
+1. A purpose-built evaluator reads each spectrum. Here it is a classical least squares lineshape fit behind a small interface, so a trained model can take its place. On synthetic spectra ([docs/nmr.md](docs/nmr.md), `labauto nmr-check`), its mean absolute error is 0.29 points of yield on clean spectra against 1.37 for plain integration with a phase correction, 0.54 against 3.83 when the lines are broadened by a poor shim, and 0.27 against 1.42 with a 15 degree phase error. It takes about 30 ms a spectrum.
 2. The product has two NMR signals, fitted independently. An impurity hiding under one makes them disagree, and the evaluator flags the well: 9 % of impurities under 5 points, 93 % from 5 to 10, and all of those over 10, with no false alarm on the same 120 spectra without the impurity.
 3. Code pairs the readouts per condition and flags where LC/MS and NMR disagree. The evidence pack holds no truth.
 4. The overwatch, the generalist main model, judges each condition (accept, flag, or rerun) and names suspected faults. It must cite the evidence for each verdict, and code rejects any number not found where it is cited.
@@ -357,6 +357,8 @@ Commands: `labauto plan "<request>"`, `labauto status <run>`, `labauto approve <
 
 ## Results
 
+The commands that make the results pages (`eval-planner`, `eval-reviewer`, `nmr-check`, and `benchmark`) write the committed pages by default. To check a number without changing the repository, give `--out` (and `--png` where there is one) a path under `runs/`, which git ignores.
+
 Planner evaluation, from `labauto eval-planner --set <set> --trials 5` on local models served by Ollama on one 32 GB GPU. A test set is a list of requests with the right answer written down before any model saw them ([examples/testsets/](examples/testsets/)). "Valid" means the design passed every check. "Faithful" means a valid design also keeps what was asked, judged by rules written for each request beforehand: the values, the controls, the replicates, and the number of wells. Whether a needed change was declared is a separate column on each page, which checks that the list of changes is not empty. The paraphrase set rewords the five core requests; the held-out set has eleven new kinds of request, such as a reagent that runs out without being named.
 
 | Set | Model | Trials | Valid first try | Valid after local repairs | Handed to person | Internal error | Faithful (of valid) |
@@ -369,9 +371,9 @@ Planner evaluation, from `labauto eval-planner --set <set> --trials 5` on local 
 
 What these show:
 
-- qwen3.8:27b, a general model that reasons before it answers, did much better than qwen2.5-coder:32b, which never solved scenario 05. It is also 3 to 5 times slower per request.
-- The same code on the same model gave 23 and then 17 valid first tries on the core set. The second run overlapped heavy CPU work on the same machine, which slowed generation to as low as 16 tokens a second; one long reply hit the 600 second client timeout and is counted as an internal error. Five trials per request show large differences, not small ones.
-- The most common first-try mistake: the model's reasoning names a factor correctly (`base_equiv`), but the JSON it returns under the server's grammar names it `encoding`. The checks catch it every time and the repair fixes it. Listing the factor names in the schema sent to the server would likely stop it; that is not built.
+- qwen3.8:27b, a general model that reasons before it answers, did much better than qwen2.5-coder:32b, which never solved scenario 05. It is also slower: by median seconds it takes 2 to 6 times as long per request, and 3 to 4 times as long over the five core requests together.
+- The same planner prompt and checks on the same model gave 23 and then 17 valid first tries on the core set. The second run overlapped heavy CPU work on the same machine, which slowed generation to as low as 16 tokens a second; one long reply hit the 600 second client timeout and is counted as an internal error. Five trials per request show large differences, not small ones.
+- The most common wrong factor name: the model's reasoning names a factor correctly (`base_equiv`), but the JSON it returns under the server's grammar names it `encoding`. The checks caught it every time. The repair fixed it in 4 of the 8 trials where it happened. In the other 4, the model repeated the same names and the run went to a person; those are all 4 qwen3.8:27b hand-offs in the table above. The runs above were made before the schema sent to the server listed the assay's factor names. It does now (`reply_schema` in `src/labauto/agents/planner.py`), and in the core set run since, neither UNKNOWN_FACTOR nor MISSING_FACTOR appeared ([docs/planner_eval.md](docs/planner_eval.md)). The paraphrase and held-out sets have not been run again with it yet.
 - Faithful catches what valid does not: in 2 of 5 trials of scenario 04 ("around our usual conditions"), and again in the paraphrase, the model screened base levels without the usual 1.5 equiv.
 
 Closed loop benchmark, from `labauto benchmark --strategies random,optimizer,model --seeds 30 --model-seeds 3 --rounds 6` ([docs/benchmark.md](docs/benchmark.md)). Each of 30 seeds is a different synthetic surface. The score is the true yield of each round's recommendation. This run used the fast path: the plan's volumes stand in for the simulator's ledger.
@@ -396,11 +398,11 @@ Mean true optimum over the 30 surfaces: 82.3%. On these surfaces the optimizer f
 
 ## Plug in your own
 
-The four slots:
+The four slots, and the spectrum evaluator behind the NMR readout:
 
 | Slot | Interface | Built |
 |---|---|---|
-| Planner | `propose(client, label, messages, first=True) -> ChatResult` holding a `PlannerOutput` | live (OpenAI-compatible), hosted, scripted, and replay clients |
+| Planner | `propose(client, label, messages, first=True, assay=None) -> ChatResult` holding a `PlannerOutput`; with an assay, the schema sent to the server names its factors | live (OpenAI-compatible), hosted, scripted, and replay clients |
 | Instrument | `compile(worklist, workcell, plan, out_dir) -> Path`, `simulate(artifact, workcell) -> SimResult` | Opentrons OT-2, Tecan EVO (simulated) |
 | Decider | `decide(history, n, brief, seed) -> Decision` | random, optimizer (Gaussian process), model with the optimizer as a tool |
 | Store | `append_results`, `load_results`, `save_record` | local files (CSV and JSON); a LIMS or ELN adapter is the open slot, not built |
@@ -436,7 +438,7 @@ Nothing upstream changes: the design, plan, and worklist are vendor neutral.
 - The Opentrons simulator does not catch an overfilled well, a volume below a pipette's minimum, or a source well drawn dry. Rules in this repository catch those. See [docs/tooling_notes.md](docs/tooling_notes.md).
 - Plates and tips are assumed fresh each round, and reagents topped up between rounds.
 - No scheduler, no multi-instrument coordination, no sample tracking system.
-- Results depend on the model. The planner evaluation covers two local models, three test sets, and 5 trials per request; the model decider ran live in one campaign. The test sets were drafted by the same AI assistant that built the planner and reviewed by the owner; a test set written by someone outside would be a stronger test.
+- Results depend on the model. The planner evaluation covers two local models (the second on the core set only), three test sets, and 5 trials per request; the model decider ran live in one campaign. The test sets were drafted by the same AI assistant that built the planner and reviewed by the owner; a test set written by someone outside would be a stronger test.
 - The NMR spectra are synthetic, and the fitter models them with the same line shapes the simulator uses, so its accuracy is a lower bound on what real spectra would give. The data reviewer evaluation has 12 fault cases, each on one seed with one model trial. The model has not run on the 120 extra plates the fixed rules were scored on.
 
 ## What real hardware would add

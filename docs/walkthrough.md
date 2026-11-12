@@ -1,8 +1,10 @@
 # Walkthrough: one request, from text to a protocol a person can approve
 
 This follows the first planner scenario through every layer, using the real
-files in [examples/sample_run/](../examples/sample_run/). Every excerpt below is
-copied from those files, which were written by `labauto check`.
+files in [examples/sample_run/](../examples/sample_run/). That folder was
+written by `labauto check examples/designs/good_factorial.json`, a hand-written
+design with the same grid the planner gives for this request. The excerpts in
+sections 4 to 8 are copied from those files.
 
 ## 1. The request
 
@@ -13,10 +15,13 @@ copied from those files, which were written by `labauto check`.
 ## 2. The design
 
 The planner's only job is to turn the request into a short design (principle
-P1). No model has run in this repository yet: the planner reply for this
-scenario is a scripted one (`examples/scripted/01_simple_factorial.json`). It
-gives the same grid as the design file used in the sample run,
-[examples/designs/good_factorial.json](../examples/designs/good_factorial.json):
+P1). A live reply for this scenario, from qwen3.8:27b served by Ollama, is
+recorded in `examples/recordings/01_simple_factorial.jsonl`. A hand-written
+reply from before any model was available is kept in
+`examples/scripted/01_simple_factorial.json`. Both give the same grid as the
+design file used in the sample run,
+[examples/designs/good_factorial.json](../examples/designs/good_factorial.json).
+The fields that matter here, from that file:
 
 ```json
 {
@@ -42,8 +47,8 @@ gives the same grid as the design file used in the sample run,
 ```
 
 That is 12 conditions (4 catalyst loadings x 3 base levels x 1 co-solvent
-level), 3 replicates, controls on. Code fills in the ids, the layout seed, and
-who wrote it.
+level), 3 replicates, controls on. When the planner writes a design, code fills
+in the ids, the layout seed, and who wrote it.
 
 ## 3. Design rules
 
@@ -67,7 +72,9 @@ F1,sample,8,1,4.0,2.0,20.0,72,40,40,40,8,200
 ```
 
 A1 and B1 are negative controls (no catalyst). C1 and D1 are reference
-controls. Samples start at E1, shuffled with the layout seed.
+controls. Samples start at E1, shuffled with the layout seed, which is 7 in
+this design file. `labauto plan` takes the seed from `--seed`, 0 by default, so
+a planned run of this request puts other samples in E1 onward.
 
 ## 5. The worklist
 
@@ -181,7 +188,7 @@ Design hash: 3ad278127ad2099818310d0fed49d899973fa862c04d3998bdcb0072d9294891
 Protocol hash: 0d9b05e07cb80fe85613c00778b2c6bad51bf642760d950f4e1e54c6b0fc011b
 ```
 
-In a planned run (`labauto plan`), the same content sits under a header that
+In a planned run (`labauto plan`), the same sections sit under a header that
 lists the request, every change from it the planner declared, its assumptions,
 and each attempt. A person then runs `labauto approve <run> --by NAME`, which
 writes `approval.json` with the design hash and protocol hash. If either file
@@ -190,7 +197,8 @@ changes later, the approval is void.
 ## Break it yourself
 
 Three small edits, and the error each one produces. The messages below are
-copied from real runs of `labauto check`.
+copied from real runs of `labauto check`, with the run folder and summary
+path left out.
 
 1. In a copy of `examples/designs/good_factorial.json`, change the catalyst
    list to `[1, 2, 4, 8.25]`:
