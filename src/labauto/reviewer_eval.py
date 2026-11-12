@@ -29,7 +29,7 @@ import json
 import multiprocessing
 import time
 from collections import Counter, defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -101,16 +101,17 @@ class EvalResult(NamedTuple):
     sweep: dict | None = None
 
 
-def default_page(path: str | Path) -> str | None:
+def default_page(path: str | Path, pages: Iterable[str] | None = None) -> str | None:
     """The default page a path resolves to, or None.
 
+    pages are the default pages to check; when not given, this module's own.
     A default page is checked against the working folder and the repository,
     so naming it by another spelling or an absolute path still matches.
     """
     from labauto.config import repo_root
 
     target = Path(path).resolve()
-    for page in DEFAULT_OUTS.values():
+    for page in DEFAULT_OUTS.values() if pages is None else pages:
         for base in (Path.cwd(), repo_root()):
             if (base / page).resolve() == target:
                 return page

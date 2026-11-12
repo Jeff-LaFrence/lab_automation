@@ -8,6 +8,11 @@ no_hints). Each prompt has its own default page under docs/, and only a live
 client may write a default page, whatever spelling of its path is given.
 After the model's cases it runs the two fixed baselines on --baseline-seeds
 extra seeds per case (0 skips this). That sweep calls no model.
+
+eval-reviewer-sweep runs the overwatch on that sweep's plates, read from an
+eval-reviewer run folder, one trial per plate. It builds and guards its
+client as eval-reviewer does, has its own default page per prompt, and can
+be resumed with --resume when the endpoint stops answering.
 """
 
 from __future__ import annotations
@@ -209,8 +214,7 @@ def cmd_review(args: argparse.Namespace) -> int:
 
 
 def cmd_eval_reviewer(args: argparse.Namespace) -> int:
-    from labauto.cli_plan import ConfigError, make_clients, settings_for
-    from labauto.config import load_settings
+    from labauto.cli_plan import ConfigError, make_clients
     from labauto.planner_eval import NoModelAnswered
     from labauto.reviewer_eval import (
         BASELINE_SEEDS,
@@ -234,17 +238,9 @@ def cmd_eval_reviewer(args: argparse.Namespace) -> int:
         print(f"error: a {args.client.partition(':')[0]} client does not write {page}.")
         print("Pass --out <file> to write its page somewhere else.")
         return EXIT_FAILED
-    if args.client == "live":
-        settings = load_settings()
-        if args.model and settings.main is not None:
-            # Evaluate this model on the main endpoint, where the overwatch always runs.
-            settings.main = settings.main.model_copy(update={"model": args.model})
-            settings.small = None
-    elif args.model:
-        print("error: --model applies only to --client live.")
+    settings = _client_settings(args)
+    if settings is None:
         return EXIT_FAILED
-    else:
-        settings = settings_for(args.client)
     try:
         clients = make_clients(args.client, settings)
     except ConfigError as exc:
@@ -299,6 +295,113 @@ def cmd_eval_reviewer(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _client_settings(args: argparse.Namespace):
+    """Settings for --client and --model, as eval-reviewer builds them, or None after an error."""
+    from labauto.cli_plan import settings_for
+    from labauto.config import load_settings
+
+    if args.client == "live":
+        settings = load_settings()
+        if args.model and settings.main is not None:
+            # Evaluate this model on the main endpoint, where the overwatch always runs.
+            settings.main = settings.main.model_copy(update={"model": args.model})
+            settings.small = None
+        return settings
+    if args.model:
+        print("error: --model applies only to --client live.")
+        return None
+    return settings_for(args.client)
+
+
+def cmd_eval_reviewer_sweep(args: argparse.Namespace) -> int:
+    from labauto.cli_plan import ConfigError, make_clients
+    from labauto.reviewer_eval import default_page, shown_path
+    from labauto.reviewer_sweep import (
+        COMMAND,
+        RUNS_DIR,
+        STOP_AFTER,
+        SWEEP_OUTS,
+        review_sweep,
+        run_prompt,
+        sweep_page,
+    )
+
+    cases = [c.strip() for c in args.cases.split(",") if c.strip()] if args.cases else None
+    try:
+        prompt = run_prompt(args.resume, args.prompt)
+    except ValueError as exc:
+        print(f"error: {exc}")
+        return EXIT_FAILED
+    out = args.out or SWEEP_OUTS[prompt]
+    page = sweep_page(out)
+    if args.client != "live" and page is not None:
+        print(f"error: a {args.client.partition(':')[0]} client does not write {page}.")
+        print("Pass --out <file> to write its page somewhere else.")
+        return EXIT_FAILED
+    if default_page(out) is not None:
+        print(f"error: {default_page(out)} is the eval-reviewer page. Pass another --out.")
+        return EXIT_FAILED
+    settings = _client_settings(args)
+    if settings is None:
+        return EXIT_FAILED
+    try:
+        clients = make_clients(args.client, settings)
+    except ConfigError as exc:
+        print(f"error: {exc}")
+        print(f"{out} was not written.")
+        return EXIT_NEEDS_PERSON
+    kind, _, source = clients.spec.partition(":")
+    same_client = ([f"--model {args.model}"] if args.model else []) + (
+        [f"--client {kind}:{shown_path(source)}"] if args.client != "live" else []
+    )
+    same_out = [f"--out {shown_path(out)}"] if args.out is not None else []
+    command = " ".join(
+        [COMMAND, shown_path(args.source)]
+        + ([f"--prompt {args.prompt}"] if args.prompt and args.prompt != "default" else [])
+        + ([f"--cases {','.join(cases)}"] if cases else [])
+        + same_client
+        + ([f"--runs {shown_path(args.runs)}"] if args.runs != RUNS_DIR and not args.resume else [])
+        + same_out
+        + ([f"--resume {shown_path(args.resume)}"] if args.resume else [])
+    )
+    try:
+        result = review_sweep(
+            args.source,
+            clients.local,
+            settings,
+            prompt=prompt,
+            cases=cases,
+            runs_dir=args.runs,
+            resume=args.resume,
+            out_path=Path(out),
+            command=command,
+        )
+    except ValueError as exc:
+        print(f"error: {exc}")
+        return EXIT_FAILED
+    if result.path is not None:
+        print(f"Wrote {result.path}")
+    else:
+        print(f"No plate has been reviewed yet, so {out} was not written.")
+    print(
+        f"The overwatch has reviewed {result.reviewed} of {result.plates} plates in this run's "
+        f"cases ({result.asked} sent to the model now). Plates are under "
+        f"{shown_path(result.run_dir)}."
+    )
+    if result.stopped:
+        print(f"The endpoint stopped answering {STOP_AFTER} times in a row, so the run stopped.")
+    if result.reviewed < result.plates:
+        untried = result.plates - result.reviewed - result.outages
+        print(
+            f"Not reviewed yet: {result.outages} ended on an outage, {untried} not tried. "
+            "To resume:"
+        )
+        resume = [COMMAND, shown_path(args.source), "--resume", shown_path(result.run_dir)]
+        print("  " + " ".join(resume + same_client + same_out))
+        return EXIT_NEEDS_PERSON
+    return EXIT_OK
+
+
 def add_parsers(sub) -> None:
     """Register this module's commands on the main parser."""
     p = sub.add_parser("review", help="have the overwatch reviewer judge one round's evidence pack")
@@ -343,3 +446,39 @@ def add_parsers(sub) -> None:
         "replay and scripted runs must name another file)",
     )
     p.set_defaults(func=cmd_eval_reviewer)
+
+    p = sub.add_parser(
+        "eval-reviewer-sweep",
+        help="run the overwatch reviewer on the plates of an eval-reviewer baseline sweep",
+    )
+    p.add_argument(
+        "source", help="an eval-reviewer run folder that holds baseline_seeds/sweep.json"
+    )
+    p.add_argument(
+        "--prompt",
+        default=None,
+        choices=["default", "no_hints"],
+        help="the overwatch prompt (default: default; a resumed run keeps its own)",
+    )
+    p.add_argument(
+        "--cases",
+        default=None,
+        help="comma separated case ids to run, in this order (default: every case, in the "
+        "sweep's order)",
+    )
+    p.add_argument("--resume", default=None, help="continue the run in this folder")
+    p.add_argument("--runs", default="runs/eval_reviewer_sweep")
+    p.add_argument(
+        "--model",
+        default=None,
+        help="model name to use on the main endpoint, where the overwatch runs (live only)",
+    )
+    p.add_argument("--client", default="live", help="live, replay:<file>, or scripted:<file>")
+    p.add_argument(
+        "--out",
+        default=None,
+        help="the page to write (default docs/reviewer_sweep.md, or "
+        "docs/reviewer_sweep_no_hints.md with --prompt no_hints; live only; "
+        "replay and scripted runs must name another file)",
+    )
+    p.set_defaults(func=cmd_eval_reviewer_sweep)
