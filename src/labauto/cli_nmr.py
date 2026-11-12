@@ -61,13 +61,13 @@ def run_check(
     size, and fits each one twice: with the impurity and with it left out (the
     same draws and the same noise otherwise).
     """
+    from labauto.blas import one_blas_thread
     from labauto.nmr_analysis import (
         LineshapeFitter,
         autophase,
         correct_baseline,
         naive_yields,
         naive_yields_autophased,
-        one_blas_thread,
     )
     from labauto.virtual.nmr import NmrSettings, draw_params, ppm_axis, render
 

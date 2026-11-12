@@ -49,7 +49,6 @@ from __future__ import annotations
 import statistics
 from collections import defaultdict
 from collections.abc import Callable
-from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -60,6 +59,7 @@ from scipy.signal import hilbert
 from scipy.special import dawsn
 
 from labauto import labware
+from labauto.blas import one_blas_thread
 from labauto.models import Assay, Plan
 
 NMR_FIT_POOR = "NMR_FIT_POOR"
@@ -231,16 +231,6 @@ class FitLimits(BaseModel):
 
 
 # ---------------------------------------------------------------- shared steps
-
-
-def one_blas_thread() -> AbstractContextManager:
-    """Run linear algebra on one thread. The fit's matrices are tiny, and on a busy
-    machine a threaded BLAS spends more time starting threads than computing."""
-    try:
-        from threadpoolctl import threadpool_limits  # installed with scikit-learn
-    except ImportError:  # pragma: no cover
-        return nullcontext()
-    return threadpool_limits(1, user_api="blas")
 
 
 def _in(ppm: np.ndarray, lo: float, hi: float) -> np.ndarray:
