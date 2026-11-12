@@ -17,6 +17,7 @@ result.json in the same folder holds everything the page is built from.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import statistics
@@ -27,6 +28,7 @@ from pathlib import Path
 
 from labauto.agents.llm import Transcript
 from labauto.config import repo_root
+from labauto.decide import model_decider
 from labauto.decide.base import build_history, recommendation
 from labauto.decide.optimizer import OptimizerDecider, round_one
 from labauto.decide.random_decider import RandomDecider
@@ -43,18 +45,41 @@ class BenchmarkError(ValueError):
     """A run folder that cannot be resumed with these settings."""
 
 
+def _turns(messages: list[dict] | None) -> list[tuple]:
+    """The messages a call sends, without the system message.
+
+    A client may add the reply schema to the system message before it records
+    it, so the system prompt is checked by its hash in model/settings.json instead.
+    """
+    return [(m.get("role"), m.get("content")) for m in messages or [] if m.get("role") != "system"]
+
+
 class CountingTranscript(Transcript):
-    """A transcript that also counts the calls it served from lines recorded earlier."""
+    """A transcript that also counts the calls it served from lines recorded earlier.
+
+    A recorded reply is replayed only when it was asked with the same messages
+    this run would send. Otherwise the code or the assay changed since it was
+    recorded, and the run stops with a BenchmarkError.
+    """
 
     def __init__(self, path: Path | None):
         super().__init__(path)
         self.recorded_before = len(self.records)
         self.replayed = 0
 
-    def lookup(self, meta: dict, call: int) -> dict | None:
-        rec = super().lookup(meta, call)
-        if rec is not None:
-            self.replayed += 1
+    def lookup(self, meta: dict, call: int, messages: list[dict] | None = None) -> dict | None:
+        rec = super().lookup(meta, call, messages)
+        if rec is None:
+            return None
+        if messages is not None and _turns(rec.get("messages")) != _turns(messages):
+            where = "this run" if self.path is None else shown_path(self.path)
+            raise BenchmarkError(
+                f"{where} holds a reply to {meta.get('scope')} turn {meta.get('attempt')} "
+                f"call {call} that was asked with other messages than this run would send. "
+                "The decider's code or the assay changed since it was recorded. "
+                "Use another --run-dir."
+            )
+        self.replayed += 1
         return rec
 
     @property
@@ -80,8 +105,15 @@ def shown_path(path: str | Path) -> str:
         return f"<outside the repository>/{p.name}"
 
 
+def decider_prompt_sha256() -> str:
+    """sha256 of the model decider's system prompt, as the decider loads it."""
+    return hashlib.sha256(
+        model_decider.load_prompt("decider_system.md").encode("utf-8")
+    ).hexdigest()
+
+
 def check_model_settings(run_dir: Path, settings: dict) -> None:
-    """Refuse to replay calls that were made for another surface or another model.
+    """Refuse to replay calls that were made for another surface, model, or decider prompt.
 
     The first model run in a folder writes model/settings.json. A later run in
     the same folder must match it, or its replayed replies would answer
@@ -208,13 +240,28 @@ def run_benchmark(
         "surface_seed": surface_seed,
         "rounds": rounds,
         "seeds": seeds,
-        "model_seeds": model_count,
+        "model_seeds": model_count if run_model else 0,
         "command": command,
         "model_name": model_name,
         "run_dir": None if run_dir is None else shown_path(run_dir),
     }
+    recorded = run_dir is not None and any((Path(run_dir) / "model").glob("seed_*.jsonl"))
+    if "model" in strategies and not run_model and recorded:
+        # Skipping the model here would save a result.json without the model's scores.
+        raise BenchmarkError(
+            f"{shown_path(run_dir)} holds recorded model calls, but no model endpoint is "
+            "configured, so this run would drop the model's results from that folder. "
+            "Configure the endpoint to resume it, or use another --run-dir."
+        )
     if run_model and run_dir is not None:
-        check_model_settings(run_dir, {"surface_seed": surface_seed, "model": model_name})
+        check_model_settings(
+            run_dir,
+            {
+                "surface_seed": surface_seed,
+                "model": model_name,
+                "decider_prompt_sha256": decider_prompt_sha256(),
+            },
+        )
     for seed in range(1, max(seeds, model_count if run_model else 0) + 1):
         out["optimum"][seed] = grid_optimum(
             assay, surface_for(seed if surface_seed is None else surface_seed)
@@ -332,11 +379,16 @@ def _optimum_line(result: dict, count: int, mean_opt: float, these: str = "the")
     return f"True optimum of surface seed {result['surface_seed']}: {mean_opt:.1f}%."
 
 
-def _model_seeds_if_fewer(result: dict) -> list[int]:
-    """The model's seeds, when another strategy ran on more seeds than the model. Else empty."""
-    model = sorted(result["scores"].get("model", {}))
-    others = [len(b) for s, b in result["scores"].items() if s != "model"]
-    return model if model and any(n > len(model) for n in others) else []
+def _shared_seeds(result: dict) -> list[int]:
+    """The seeds every strategy ran on, when the model ran on other seeds than the rest.
+
+    Empty when every strategy ran on the same seeds, or the model did not run.
+    """
+    model = set(result["scores"].get("model", {}))
+    others = [set(b) for s, b in result["scores"].items() if s != "model" and b]
+    if not model or not others or all(o == model for o in others):
+        return []
+    return sorted(model.intersection(*others))
 
 
 def _model_call_lines(result: dict) -> list[str]:
@@ -378,7 +430,9 @@ def write_outputs(
         statistics.fmean(result["optimum"][s] for s in seeds_in_plot) if seeds_in_plot else 0.0
     )
     plot(table, rounds, mean_opt, png_path)
-    model_seeds = _model_seeds_if_fewer(result)
+    shared = _shared_seeds(result)
+    model_fewer = shared == sorted(result["scores"].get("model", {}))
+    section = "On the model's seeds" if model_fewer else "On the shared seeds"
 
     lines = [
         "# Closed loop benchmark",
@@ -404,10 +458,11 @@ def write_outputs(
     ]
     lines += _table_lines(table, rounds, "##")
     lines += ["", _optimum_line(result, len(seeds_in_plot), mean_opt), ""]
-    if model_seeds:
+    if shared:
+        others = "more" if model_fewer else str(len(shared))
         lines += [
-            f"The model ran on {len(model_seeds)} seeds and the others on more, so the tables "
-            'above do not compare them on the same seeds. See "On the model\'s seeds" below.',
+            f"The model ran on {len(result['scores']['model'])} seeds and the others on {others}, "
+            f'so the tables above do not compare them on the same seeds. See "{section}" below.',
             "",
         ]
     lines += [f"![Benchmark]({os.path.relpath(png_path, md_path.parent)})", ""]
@@ -426,20 +481,20 @@ def write_outputs(
     for strategy, secs in result["seconds"].items():
         lines.append(f"- {strategy}: {secs:.0f} s for {table[strategy]['seeds']} seeds.")
     lines += _model_call_lines(result)
-    if model_seeds:
-        same = summarize(result, rounds, only=set(model_seeds))
-        same_opt = statistics.fmean(result["optimum"][s] for s in model_seeds)
+    if shared:
+        same = summarize(result, rounds, only=set(shared))
+        same_opt = statistics.fmean(result["optimum"][s] for s in shared)
         lines += [
             "",
-            "## On the model's seeds",
+            f"## {section}",
             "",
-            f"These tables score every strategy on seeds {model_seeds[0]} to {model_seeds[-1]}, "
-            "the only seeds the model ran on, so compare the model with the others here and "
-            "not in the tables above.",
+            f"These tables score every strategy on seeds {shared[0]} to {shared[-1]}, "
+            f"the only seeds the {'model' if model_fewer else 'others'} ran on, so compare the "
+            "model with the others here and not in the tables above.",
             "",
         ]
         lines += _table_lines(same, rounds, "###")
-        lines += ["", _optimum_line(result, len(model_seeds), same_opt, "these")]
+        lines += ["", _optimum_line(result, len(shared), same_opt, "these")]
     lines += [
         "",
         f"Model: {model_name or 'none (no model strategy was run)'}  ",

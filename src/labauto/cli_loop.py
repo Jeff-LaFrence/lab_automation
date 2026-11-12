@@ -181,8 +181,9 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
             f"--rounds {args.rounds}",
         ]
         + ([f"--surface-seed {args.surface_seed}"] if args.surface_seed is not None else [])
-        + ([f"--out {args.out}"] if args.out != "docs/benchmark.md" else [])
-        + ([f"--png {args.png}"] if args.png != "docs/img/benchmark.png" else [])
+        # Paths go through shown_path: the page and result.json never carry a local folder.
+        + ([f"--out {shown_path(args.out)}"] if args.out != "docs/benchmark.md" else [])
+        + ([f"--png {shown_path(args.png)}"] if args.png != "docs/img/benchmark.png" else [])
         + ([f"--run-dir {shown_path(run_dir)}"] if args.run_dir else [])
     )
     try:

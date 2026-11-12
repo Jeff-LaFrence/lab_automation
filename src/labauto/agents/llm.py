@@ -198,7 +198,12 @@ class Transcript:
     def _key(rec: dict) -> tuple:
         return (rec.get("scope", ""), rec.get("attempt"), rec.get("call"))
 
-    def lookup(self, meta: dict, call: int) -> dict | None:
+    def lookup(self, meta: dict, call: int, messages: list[dict] | None = None) -> dict | None:
+        """The recorded line for this call, or None. messages is what the call would send.
+
+        This class does not check messages. A subclass may, to refuse a reply
+        that was recorded for another question.
+        """
         return self._cache.get((meta.get("scope", ""), meta.get("attempt"), call))
 
     def append(self, rec: dict) -> None:
@@ -252,7 +257,7 @@ def chat(
     convo = list(messages)
     total = ChatResult(endpoint_label=label)
     for call in range(1, max(1, max_calls) + 1):
-        recorded = transcript.lookup(meta, call) if transcript else None
+        recorded = transcript.lookup(meta, call, convo) if transcript else None
         if recorded is not None:
             raw = RawReply(
                 text=recorded["raw"],

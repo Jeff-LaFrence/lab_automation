@@ -13,6 +13,7 @@ from conftest import ROOT
 from labauto.agents.llm import EndpointUnavailable, ScriptedClient, Transcript
 from labauto.benchmark import (
     BenchmarkError,
+    decider_prompt_sha256,
     line_labels,
     load_result,
     run_benchmark,
@@ -253,6 +254,87 @@ def test_plot_labels_name_each_line_seed_count(first_run):
     assert labels == {"random": "random (4 seeds)", "model": "model (3 seeds)"}
 
 
+def test_shared_seed_tables_when_the_model_ran_on_more_seeds(tmp_path):
+    result = {
+        "scores": {
+            "random": {1: [50.0, 60.0], 2: [70.0, 71.0]},
+            "model": {1: [55.0, 79.0], 2: [65.0, 75.0], 3: [40.0, 90.0]},
+        },
+        "optimum": {1: 80.0, 2: 80.0, 3: 90.0},
+        "seconds": {"random": 1.0, "model": 2.0},
+        "skipped": {},
+        "fallbacks": {"model": (0, 3)},
+        "surface_seed": None,
+    }
+    md = tmp_path / "b.md"
+    write_outputs(result, 2, "cmd", md, tmp_path / "b.png", "scripted", "abc")
+    main_part, section = md.read_text().split("## On the shared seeds", 1)
+    assert (
+        "| random | 2 | 60.0 | 65.5 |" in main_part and "| model | 3 | 53.3 | 81.3 |" in main_part
+    )
+    assert (
+        "The model ran on 3 seeds and the others on 2, so the tables above do not compare them "
+        'on the same seeds. See "On the shared seeds" below.'
+    ) in main_part
+    assert "On the model's seeds" not in main_part
+    assert "seeds 1 to 2, the only seeds the others ran on" in section
+    # Seeds 1 and 2 only: model means (55+65)/2 and (79+75)/2; within 3 points of 80 in round 2.
+    assert "| random | 2 | 60.0 | 65.5 |" in section and "| model | 2 | 60.0 | 77.0 |" in section
+    assert "| random | 2 | 0.00 | 0.00 |" in section and "| model | 2 | 0.00 | 0.50 |" in section
+    assert "Mean true optimum over these 2 surfaces: 80.0%." in section
+
+
+def test_model_seeds_is_zero_when_the_model_did_not_run(assay):
+    alone = run_benchmark(assay, ["random"], seeds=1, rounds=2)
+    skipped = run_benchmark(assay, ["random", "model"], seeds=1, rounds=2)
+    assert alone["model_seeds"] == 0 and skipped["model_seeds"] == 0
+    assert "model" in skipped["skipped"] and "model" not in skipped["scores"]
+
+
+def test_first_run_records_the_decider_prompt_hash(first_run):
+    run_dir, result, _ = first_run
+    settings = json.loads((run_dir / "model" / "settings.json").read_text())
+    assert settings["decider_prompt_sha256"] == decider_prompt_sha256()
+    assert result["model_seeds"] == MODEL_SEEDS
+
+
+def test_a_changed_decider_prompt_is_refused(first_run, assay, monkeypatch):
+    import labauto.decide.model_decider as decider_mod
+
+    run_dir, _, _ = first_run
+    saved = (run_dir / "result.json").read_text()
+    monkeypatch.setattr(decider_mod, "load_prompt", lambda name: "Another decider prompt.")
+    client = ScriptedClient([])
+    with pytest.raises(BenchmarkError, match="decider_prompt_sha256"):
+        bench(assay, run_dir, client)
+    assert client.calls == [] and (run_dir / "result.json").read_text() == saved
+
+
+def test_a_reply_recorded_for_other_messages_is_refused(first_run, assay):
+    run_dir, _, _ = first_run
+    saved = (run_dir / "result.json").read_text()
+    path = run_dir / "model" / "seed_02.jsonl"
+    lines = path.read_text().splitlines()
+    rec = json.loads(lines[2])  # round 3, turn 1: asked with round 2's results in the digest
+    assert rec["scope"] == "decider-r03" and rec["messages"][1]["role"] == "user"
+    rec["messages"][1]["content"] = rec["messages"][1]["content"].replace("ROUND 3", "ROUND 9")
+    lines[2] = json.dumps(rec)
+    path.write_text("\n".join(lines) + "\n")
+    client = ScriptedClient([])
+    with pytest.raises(BenchmarkError, match="asked with other messages") as caught:
+        bench(assay, run_dir, client)
+    assert "seed_02.jsonl" in str(caught.value) and "decider-r03 turn 1 call 1" in str(caught.value)
+    assert client.calls == [] and (run_dir / "result.json").read_text() == saved
+
+
+def test_a_folder_with_recorded_calls_is_not_run_without_the_model(first_run, assay):
+    run_dir, _, _ = first_run
+    saved = (run_dir / "result.json").read_text()
+    with pytest.raises(BenchmarkError, match="holds recorded model calls"):
+        bench(assay, run_dir, ScriptedClient([]), model_factory=None)
+    assert (run_dir / "result.json").read_text() == saved
+
+
 # ---------------------------------------------------------------- command line
 
 
@@ -303,6 +385,25 @@ def test_benchmark_says_how_to_go_on_when_the_endpoint_stops(fake_run, tmp_path,
     out = capsys.readouterr().out
     assert "local-main did not answer" in out and f"--run-dir {run_dir}" in out
     assert "written" not in fake_run
+
+
+def test_benchmark_without_an_endpoint_keeps_a_folder_with_recorded_calls(
+    first_run, tmp_path, capsys, monkeypatch
+):
+    import labauto.cli_plan as cli_plan
+
+    def no_endpoint(spec, settings):
+        raise cli_plan.ConfigError("no endpoint")
+
+    monkeypatch.setattr(cli_plan, "make_clients", no_endpoint)
+    run_dir, _, _ = first_run
+    saved = (run_dir / "result.json").read_text()
+    page_md, page_png = tmp_path / "out" / "b.md", tmp_path / "out" / "b.png"
+    args = ["benchmark", "--strategies", "random,model", "--seeds", "1", "--rounds", "3"]
+    args += ["--run-dir", str(run_dir), "--out", str(page_md), "--png", str(page_png)]
+    assert main(args) == 2
+    assert "holds recorded model calls" in capsys.readouterr().out
+    assert (run_dir / "result.json").read_text() == saved and not page_md.exists()
 
 
 def test_benchmark_builds_one_model_decider_per_transcript(fake_run, tmp_path, monkeypatch):
