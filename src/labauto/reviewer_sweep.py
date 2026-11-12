@@ -480,22 +480,22 @@ def _n(k: int, word: str) -> str:
 
 
 def pooled_sentence(c: dict, where: str) -> str:
-    """One sentence, from the counts, on what pooling the overwatch with QC plus statistics did."""
+    """Short sentences, from the counts, on what pooling the overwatch with QC plus statistics did."""
     n, true, wells = c["reviewed"], c["true"], c["true_wells"]
     st_c, es_c = c["qc_stats_caught"], c["either_stats_caught"]
     st_h, es_h = c["qc_stats_hits"], c["either_stats_hits"]
     st_a, es_a = c["qc_stats_alarm"], c["either_stats_alarm"]
     lead = f"On {where}, pooling the overwatch with {STATS}"
     if es_c == st_c and es_h == st_h:
-        text = (
-            f"{lead} added nothing: it caught no more true faults ({_of(st_c, true)}) and named "
-            f"no more faulty wells ({_of(st_h, wells)})"
+        found = (
+            f"It caught no more true faults ({_of(st_c, true)}) and named no more faulty wells "
+            f"({_of(st_h, wells)})."
         )
         if es_a == st_a:
-            return text + ", and it added no plate with a false alarm."
+            return f"{lead} added nothing. {found} It added no plate with a false alarm."
         return (
-            text + f". It only added a false alarm on {_n(es_a - st_a, 'more plate')} "
-            f"({st_a} to {_of(es_a, n)})."
+            f"{lead} found nothing new. {found} It only added a false alarm on "
+            f"{_n(es_a - st_a, 'more plate')} ({st_a} to {_of(es_a, n)})."
         )
     caught = (
         f"caught {_n(es_c - st_c, 'more true fault')} ({st_c} to {_of(es_c, true)})"
@@ -512,7 +512,7 @@ def pooled_sentence(c: dict, where: str) -> str:
         if es_a > st_a
         else "added no plate with a false alarm"
     )
-    return f"{lead} {caught}, {named}, and {alarms}."
+    return f"{lead} {caught}. It {named}. It {alarms}."
 
 
 def prompt_note(prompt: str) -> str:
