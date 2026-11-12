@@ -5,7 +5,7 @@
 | Term | Meaning here |
 |---|---|
 | Request | Plain text from a scientist saying what to test, given to `labauto plan` in quotes or in a file. The planner turns it into a design. |
-| Design | The short JSON that says what to test: the conditions (a `grid` of values per factor, every combination used, or a list), the replicates, whether controls are on, and any deviations and assumptions. A model or a person writes it. When the planner writes it, code fills in the ids, the plate layout, and who wrote it. In the closed loop, code builds it from the decider's picks. |
+| Design | The short JSON that says what to test: the conditions (a `grid` of values per factor, every combination used, or a list), the replicates, whether controls are on, and any deviations and assumptions. A model or a person writes it. When the planner writes it, code fills in the ids, the layout seed, and who wrote it. In the closed loop, code builds it from the decider's picks. |
 | Condition | One combination of factor values, such as catalyst 2.0 mol %, base 1.5 equiv, and co-solvent 20 %. Each condition fills its replicate wells, and results are reported per condition. |
 | Factor | Something a design varies: `catalyst_mol_pct`, `base_equiv`, or `cosolvent_pct` in the shipped assay. Each factor sets one reagent's volume, so its allowed values are volume steps: catalyst runs from 0.5 to 10 mol % in steps of 0.5, at 0.5 mol % per uL. |
 | Assay | A config file that defines one kind of experiment: the reagents, the factors and their allowed values, the controls, how peak areas become yields, and the quality limits. The shipped one, `generic_reaction_screen_v1`, is a synthetic reaction screen with placeholder reagents. |
@@ -28,12 +28,12 @@
 | Approval envelope | The limits inside which later rounds of a campaign are approved without a person, set when a person approves round 1 under the `envelope` policy and kept in `envelope.json`. A round goes back to a person when its assay or workcell differs or its file changed, it has more wells, a check failed, the previous round had an anomaly such as a failed plate or a decider fallback, or the 5 automatic rounds are used up. |
 | Negative control | Wells with no catalyst (A1 and B1 in the shipped assay), on every plate with controls on, which should show almost no product. If their mean yield is not below 5 %, the plate fails its quality checks. |
 | Reference control | Wells (C1 and D1) that run one fixed condition, catalyst 2.0 mol %, base 1.5 equiv, and co-solvent 20 %, with a known expected yield. If their mean is more than 8 points off, as when the `plate_drift@R` fault makes every product area on round R's plate read 25 % low, the plate fails (`PLATE_QC_FAIL`) and every well on it is excluded. |
-| Internal standard | A compound at the same known amount in every well, so yield is read as a ratio to it: in the LC/MS, the product's peak area over the standard's, divided by a response factor. A well whose standard area is more than 25 % from the plate median, as after a failed injection (the `injection_failure` fault, on by default in `labauto loop`), is flagged `IS_OUT_OF_RANGE` and excluded. |
+| Internal standard | A compound at the same known amount in every well, so yield is read as a ratio to it: in the LC/MS, the product's peak area over the standard's, divided by a response factor. A well whose standard area is more than 25 % from the plate median, as after a failed injection (the `injection_failure` fault, always on in `labauto loop`), is flagged `IS_OUT_OF_RANGE` and excluded. |
 | Recommendation | After each round, the tested condition with the highest measured mean over valid wells. The benchmark scores it by its true yield on the hidden surface, because measured means include instrument noise. |
 | Evidence pack | `evidence.json` for one round: the LC/MS and NMR numbers per condition and per well, side by side, with the flags that fixed code raised, and a plate block with the plate flags and control means. It holds no hidden truth (no true yields, no fault log), and it is all the overwatch sees. |
 | Overwatch | The data reviewer: the main model reads one round's evidence pack, gives each condition a verdict (accept, flag, or rerun), and names the faults it suspects, citing paths in the pack. Code checks every reply against fixed rules, for example that each number is found in the part of the pack the check allows, and sends a failing reply back at most twice before a person takes over. |
 | True fault log | `fault_log.json`: the faults the simulators really applied to a plate in the reviewer evaluation, taken from their own records and never from a quality flag. No reviewer sees it, and `labauto eval-reviewer` scores each reviewer against it. |
-| Test set | A folder under `examples/testsets/` with request files and a `manifest.json` that says, for each request, whether a deviation or an assumption is needed and what a faithful final design looks like. The sets are `core` (the five SPEC scenarios), `paraphrase` (the same five reworded), and `held_out` (eleven new kinds of request). |
+| Test set | A folder under `examples/testsets/` with a `manifest.json` that names its request files (the core set uses the ones in `examples/requests/`) and says, for each request, whether a deviation or an assumption is needed and what a faithful final design looks like. The sets are `core` (the five SPEC scenarios), `paraphrase` (the same five reworded), and `held_out` (eleven new kinds of request). |
 | Valid, faithful | In the planner evaluation, a design is valid when it passed every layer of the check pipeline. A valid final design is also faithful when it meets the rules written beforehand for that request: the values, the controls, the replicates, and the number of conditions or wells. So a design can be valid and still not faithful. Whether a needed change was declared is a separate column. |
 
 ## The compiler analogy
@@ -109,13 +109,13 @@ calls per request is bounded, so a run always stops: awaiting approval, or
 needing a person with its full history. An endpoint that stops answering moves
 the run to FAILED, and `labauto resume` picks it up again.
 
-Live, on a local model, the repair rounds did most of the work. In the latest
-core run on qwen3.8:27b, 23 of 25 trials were valid on the first try and 25 of
-25 after local repairs ([planner_eval.md](planner_eval.md)). In the earlier
-qwen3.8:27b runs, 4 of 130 trials went to a person, each after a repair
-repeated the same errors. The hosted rung has not run on a model, because no
-hosted model is configured, so whether it rescues designs the local model
-cannot fix is still open.
+Live, on a local model, the first try passed in most trials, and the local
+repairs fixed most of the rest. In the latest core run on qwen3.8:27b, 23 of 25
+trials were valid on the first try and 25 of 25 after local repairs
+([planner_eval.md](planner_eval.md)). In the earlier qwen3.8:27b runs, 4 of 130
+trials went to a person, each after a repair repeated the same errors. The
+hosted rung has not run on a model, because no hosted model is configured, so
+whether it rescues designs the local model cannot fix is still open.
 
 ### What stops a model from quietly changing the experiment?
 
@@ -168,6 +168,8 @@ campaign on surface seed 0. It chose rounds 2 to 6 with no fallback. In round
 tested conditions, and the third passed. It recommended catalyst 6.5 mol %,
 base 1.75 equiv, co-solvent 20 %, measured at 86.6% over 9 wells, which is the
 surface's grid optimum. One campaign on one surface is an example, not a
-comparison. Its calls are in `examples/recordings/decider.jsonl`, and the demo
-replays them. The fallback to the optimizer has been shown only by tests with
-scripted replies.
+comparison. Its calls are in `examples/recordings/decider.jsonl`. The demo
+replays rounds 2 and 3 from it, and
+`labauto loop --strategy model --approval auto_demo --rounds 6 --seed 1 --surface-seed 0 --client replay:examples/recordings/decider.jsonl`
+replays all six rounds. The fallback to the optimizer has been shown only by
+tests with scripted replies.
