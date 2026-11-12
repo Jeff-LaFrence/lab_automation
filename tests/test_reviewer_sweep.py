@@ -194,10 +194,10 @@ def test_the_sweep_review_scores_every_plate_next_to_both_baselines(tmp_path, so
     assert "The overwatch reviewed 6 of 6 plates in the sweep." in page
     assert (
         "On the 6 reviewed plates, pooling the overwatch with QC plus statistics caught 1 more "
-        "true fault (2 to 3 of 4), named 1 more faulty well (2 to 3 of 4), and added a false "
+        "true fault (2 to 3 of 4). It named 1 more faulty well (2 to 3 of 4). It added a false "
         "alarm on 1 more plate (1 to 2 of 6). On the 2 reviewed hard plates, pooling the "
-        "overwatch with QC plus statistics caught 1 more true fault (0 to 1 of 2), named 1 more "
-        "faulty well (0 to 1 of 2), and added no plate with a false alarm." in page
+        "overwatch with QC plus statistics caught 1 more true fault (0 to 1 of 2). It named 1 "
+        "more faulty well (0 to 1 of 2). It added no plate with a false alarm." in page
     )
     assert f"the baseline sweep of `{source.relative_to(repo_root())}`" in page
     assert "Overwatch model, as reported by the endpoint: scripted" in page
@@ -432,22 +432,22 @@ def test_the_pooled_sentence_says_plainly_when_the_overwatch_added_nothing():
     assert pooled_sentence(
         {**same, "qc_stats_alarm": 1, "either_stats_alarm": 1}, "the plates"
     ) == (
-        "On the plates, pooling the overwatch with QC plus statistics added nothing: it caught no "
-        "more true faults (11 of 12) and named no more faulty wells (20 of 30), and it added no "
+        "On the plates, pooling the overwatch with QC plus statistics added nothing. It caught no "
+        "more true faults (11 of 12) and named no more faulty wells (20 of 30). It added no "
         "plate with a false alarm."
     )
     assert pooled_sentence(
         {**same, "qc_stats_alarm": 1, "either_stats_alarm": 3}, "the plates"
     ) == (
-        "On the plates, pooling the overwatch with QC plus statistics added nothing: it caught no "
-        "more true faults (11 of 12) and named no more faulty wells (20 of 30). It only added a "
-        "false alarm on 2 more plates (1 to 3 of 10)."
+        "On the plates, pooling the overwatch with QC plus statistics found nothing new. It "
+        "caught no more true faults (11 of 12) and named no more faulty wells (20 of 30). It "
+        "only added a false alarm on 2 more plates (1 to 3 of 10)."
     )
     more = {**same, "either_stats_hits": 22, "qc_stats_alarm": 0, "either_stats_alarm": 0}
     assert pooled_sentence(more, "the plates") == (
         "On the plates, pooling the overwatch with QC plus statistics caught no more true faults "
-        "(11 of 12), named 2 more faulty wells (20 to 22 of 30), and added no plate with a false "
-        "alarm."
+        "(11 of 12). It named 2 more faulty wells (20 to 22 of 30). It added no plate with a "
+        "false alarm."
     )
 
 

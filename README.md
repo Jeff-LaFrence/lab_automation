@@ -301,14 +301,30 @@ Results, from `labauto eval-reviewer --trials 1` with the default prompt ([page]
 
 What these show:
 
-- The checks held. Code sent back 8 overwatch replies with the default prompt and 9 without hints, because they held numbers (16 and 18 in all) that were not in the part of the evidence the check allows. Every case still ended with a review that passed the checks. The check finds numbers that are not in the evidence; a made-up number that happens to equal a value there would pass.
+- The checks held. Code sent back 8 overwatch replies with the default prompt and 9 without hints, because 16 and 18 of their reasons and summaries held numbers (21 and 27 numbers in all) that were not in the part of the evidence the check allows. With the default prompt, 2 more replies held no complete JSON object and were asked again. Every case still ended with a review that passed the checks. The check finds numbers that are not in the evidence; a made-up number that happens to equal a value there would pass.
 - With the hint section, the overwatch caught 3 of the 4 hard faults that the plain QC rules miss, with no false alarm. It missed the subtle impurity.
 - Without the hint section, it caught fewer faults than the plain QC rules (8 against 9) and raised 2 false alarms. On the plain LC/MS drift it still sent the plate back for a rerun, but it named the cause as an LC/MS and NMR disagreement, not a drift. So the gain on the hard cases came from the hints, which describe how those faults look.
 - Two simple plate statistics, with no model, caught all 13 faults. Pooled with them, the overwatch added no fault and no faulty well on these plates. Those statistics were set with the hard-case recipes known, so they are a strong baseline here.
-- On 120 more plates (10 more seeds per case, no model), the statistics catch 124 of 130 faults, but on the hard plates they name only 79 of 143 faulty wells. That is where a model could still add something. The overwatch has not run on those plates; it would take 10 times the model calls of the case table.
 - 12 cases with one trial each is a small test. One case more or less moves every count.
 
-So far the overwatch shows that a model's review can be held to the numbers in the evidence. It has not shown that it finds more than fixed rules do.
+The same reviewers then ran on 120 more plates: 10 more seeds for each of the 12 cases, one model trial per plate, default prompt only ([page](docs/reviewer_sweep.md)). `labauto eval-reviewer` had already built these plates and scored the fixed rules on them; `labauto eval-reviewer-sweep` reads the same stored evidence and adds the overwatch. The plates hold 130 true faults, 40 of them on the 30 hard plates, and 269 wells hold a failed injection or an impurity. This table counts plates with at least one false alarm, not false alarms.
+
+| Reviewer | Faults caught | Hard-case faults caught | Plates with a false alarm | Faulty wells named |
+|---|---|---|---|---|
+| QC rules (code) | 92 of 130 | 2 of 40 | 2 of 120 | 114 of 269 |
+| QC plus statistics (code) | 124 of 130 | 34 of 40 | 4 of 120 | 202 of 269 |
+| Overwatch, default prompt | 115 of 130 | 25 of 40 | 8 of 120 | 131 of 269 |
+| QC plus statistics or overwatch | 130 of 130 | 40 of 40 | 10 of 120 | 211 of 269 |
+
+What these show:
+
+- The overwatch and QC plus statistics miss different hard faults. On the 20 hard plates with a mild LC/MS drift, the overwatch caught 19 and QC plus statistics 14. On the 20 with a subtle impurity, QC plus statistics caught 20 and the overwatch 6.
+- Pooled, they caught all 130 faults, including the 6 drifts QC plus statistics missed. The price was a false alarm on 6 more plates (10 of 120 against 4). Five of those were clean plates on which the overwatch called an LC/MS and NMR disagreement.
+- The overwatch named fewer faulty wells than QC plus statistics (131 against 202 of 269). Pooling added 9.
+- This used the default prompt, which describes how the hard faults look. On the 12 plates above, the prompt without that section caught none of the 4 hard faults. So the drift catches may come from the hints rather than from the model's own reading. The prompt without hints has not run on these plates (`--prompt no_hints`, about 6 hours).
+- The checks held over 10 times as many plates. Code sent back 66 replies, one each on 66 plates, because 134 of their reasons and summaries held numbers (248 in all) not found where the check allows. Each of those plates passed on its second attempt. 6 more replies held no complete JSON object and were asked again. All 120 plates ended with a valid review, after 192 model calls in about 6 hours.
+
+So a model's review can be held to the numbers in the evidence. With a prompt that describes the faults, the overwatch caught drifts that two fixed statistics missed, at the price of more false alarms. It has not shown that it does this without that description.
 
 ## The planner and the ladder
 
@@ -349,7 +365,7 @@ Commands: `labauto plan "<request>"`, `labauto status <run>`, `labauto approve <
 | Planner agent, repair, escalation, approval | built and tested; run live on a local model (qwen3.8:27b through Ollama) on three test sets, results under [Results](#results); the hosted rung has not run live (no hosted model configured) |
 | LC/MS readout | simulated, synthetic data |
 | NMR readout and spectrum evaluator | simulated, synthetic spectra; the evaluator is classical least squares, tested on synthetic spectra only ([docs/nmr.md](docs/nmr.md)) |
-| Pairing and data reviewer (overwatch) | built and tested; run live on qwen3.8:27b on 12 synthetic fault cases, one trial each, with and without its hint section; it caught 12 and 8 of 13 faults, and two fixed statistics rules caught 13 ([results](#paired-lcms-and-nmr-and-a-data-reviewer)) |
+| Pairing and data reviewer (overwatch) | built and tested; run live on qwen3.8:27b on 12 synthetic fault cases, one trial each, with and without its hint section; it caught 12 and 8 of 13 faults, and two fixed statistics rules caught 13. On 120 more plates, with the hint section only, it caught 115 of 130 faults against the statistics' 124, and 130 pooled with them ([results](#paired-lcms-and-nmr-and-a-data-reviewer)) |
 | Closed loop | built, simulated |
 | Model decider, report model note | built and tested; run live on qwen3.8:27b in one 6-round campaign (replayed in the demo) and in the benchmark on 10 surfaces, where it did not beat the optimizer |
 | Service API, skill library | not built |
@@ -357,7 +373,7 @@ Commands: `labauto plan "<request>"`, `labauto status <run>`, `labauto approve <
 
 ## Results
 
-The commands that make the results pages (`eval-planner`, `eval-reviewer`, `nmr-check`, and `benchmark`) write the committed pages by default. To check a number without changing the repository, give `--out` (and `--png` where there is one) a path under `runs/`, which git ignores.
+The commands that make the results pages (`eval-planner`, `eval-reviewer`, `eval-reviewer-sweep`, `nmr-check`, and `benchmark`) write the committed pages by default. To check a number without changing the repository, give `--out` (and `--png` where there is one) a path under `runs/`, which git ignores.
 
 Planner evaluation, from `labauto eval-planner --set <set> --trials 5` on local models served by Ollama on one 32 GB GPU. A test set is a list of requests with the right answer written down before any model saw them ([examples/testsets/](examples/testsets/)). "Valid" means the design passed every check. "Faithful" means a valid design also keeps what was asked, judged by rules written for each request beforehand: the values, the controls, the replicates, and the number of wells. Whether a needed change was declared is a separate column on each page, which checks that the list of changes is not empty. The paraphrase set rewords the five core requests; the held-out set has eleven new kinds of request, such as a reagent that runs out without being named.
 
@@ -461,7 +477,7 @@ Nothing upstream changes: the design, plan, and worklist are vendor neutral.
 - Plates and tips are assumed fresh each round, and reagents topped up between rounds.
 - No scheduler, no multi-instrument coordination, no sample tracking system.
 - Results depend on the model. The planner evaluation covers two local models (the second on the core set only), three test sets, and 5 trials per request; the model decider ran live in one campaign and on 10 benchmark surfaces. The test sets were drafted by the same AI assistant that built the planner and reviewed by the owner; a test set written by someone outside would be a stronger test.
-- The NMR spectra are synthetic, and the fitter models them with the same line shapes the simulator uses, so its accuracy is a lower bound on what real spectra would give. The data reviewer evaluation has 12 fault cases, each on one seed with one model trial. The model has not run on the 120 extra plates the fixed rules were scored on.
+- The NMR spectra are synthetic, and the fitter models them with the same line shapes the simulator uses, so its accuracy is a lower bound on what real spectra would give. The data reviewer evaluation has 12 fault cases, each on one seed with one model trial, and 120 more plates with one model trial each, run with the default prompt only.
 
 ## What real hardware would add
 
@@ -486,6 +502,7 @@ Designed and directed by the repository owner. The code was written with an AI c
 - [docs/planner_eval.md](docs/planner_eval.md) and the other `docs/planner_eval_*.md` pages: the planner evaluations, generated by `labauto eval-planner`.
 - [docs/nmr.md](docs/nmr.md): the simulated NMR and the spectrum evaluator, measured against known answers, generated by `labauto nmr-check`.
 - [docs/reviewer_eval.md](docs/reviewer_eval.md) and [docs/reviewer_eval_no_hints.md](docs/reviewer_eval_no_hints.md): the data reviewer against injected faults, generated by `labauto eval-reviewer`.
+- [docs/reviewer_sweep.md](docs/reviewer_sweep.md): the data reviewer on the 120 plates of the baseline sweep, generated by `labauto eval-reviewer-sweep`.
 - [docs/decisions.md](docs/decisions.md): choices made where the specification was silent, and open problems.
 
 ## Background
