@@ -18,8 +18,10 @@ stored reviews, so every column uses the same scoring code.
 
 Output: runs/eval_reviewer_sweep/<UTC stamp>/run.json, and per plate
 <case>/seed_<seed>/ with trial_01.json, transcript.jsonl, and
-model_calls.jsonl. A run can be resumed. A plate whose trial ended normally is
-not asked again; a plate whose trial ended on an outage is. After STOP_AFTER
+model_calls.jsonl. A run can be resumed, with the kind of client that made it.
+A plate whose trial ended normally is not asked again; a plate whose trial
+ended on an outage is. If the plates end up answered by more than one model,
+the page says so and leaves out what pooling added. After STOP_AFTER
 outages in a row the endpoint is taken to be down: the run stops and still
 writes its page from the plates done. The page is built by code from the
 output folder alone, so a resumed run rewrites it from every plate done.
@@ -34,7 +36,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import NamedTuple
 
-from labauto.agents.llm import LiveClient, Transcript
+from labauto.agents.llm import LiveClient, ReplayClient, ScriptedClient, Transcript
 from labauto.agents.router import estimate_tokens, route
 from labauto.config import Settings, repo_root
 from labauto.planner_eval import git_commit
@@ -62,6 +64,7 @@ from labauto.reviewer_eval import (
     STATS_CONSTANTS,
     STATS_OR,
     SWEEP_DIR,
+    SWEEP_OUTS,
     UNNAMED_BANNER,
     _counted,
     _of,
@@ -74,8 +77,8 @@ from labauto.reviewer_eval import (
 )
 
 COMMAND = "labauto eval-reviewer-sweep"
-# The page each prompt writes by default. Only a live client may write these.
-SWEEP_OUTS = {"default": "docs/reviewer_sweep.md", "no_hints": "docs/reviewer_sweep_no_hints.md"}
+# SWEEP_OUTS, from reviewer_eval, holds the page each prompt writes by default.
+# Only a live client may write those, and eval-reviewer never does.
 RUNS_DIR = "runs/eval_reviewer_sweep"
 TRIAL_FILE = "trial_01.json"
 STOP_AFTER = 3  # outages in a row: the endpoint is taken to be down, and the run stops
@@ -101,7 +104,9 @@ class SweepResult(NamedTuple):
     counts the plates in the run's cases, reviewed those with a scored trial,
     outages those whose last trial ended on an outage, and asked the plates
     sent to the model in this session. stopped is True when the run stopped
-    after STOP_AFTER outages in a row.
+    after STOP_AFTER outages in a row. models names each model that answered
+    on the reviewed plates, with the number of plates it answered on. More
+    than one means the run mixes models, and the page says so.
     """
 
     path: Path | None
@@ -111,6 +116,7 @@ class SweepResult(NamedTuple):
     outages: int
     stopped: bool
     asked: int
+    models: dict[str, int]
 
 
 def sweep_page(path: str | Path) -> str | None:
@@ -130,6 +136,14 @@ def check_page(path: str | Path, client) -> None:
     other = default_page(path, DEFAULT_OUTS.values())
     if other is not None:
         raise ValueError(f"{other} is the eval-reviewer page; give another out_path")
+
+
+def client_kind(client) -> str:
+    """What kind of client answers: live, scripted, replay, or its class name for any other."""
+    for kind, cls in (("live", LiveClient), ("scripted", ScriptedClient), ("replay", ReplayClient)):
+        if isinstance(client, cls):
+            return kind
+    return type(client).__name__
 
 
 def _read(path: Path):
@@ -234,7 +248,8 @@ def review_plate(
     Reads the plate's files from the source and writes trial_01.json,
     transcript.jsonl, and model_calls.jsonl under out_dir. A transcript left
     by an earlier try is reused, so a reply already recorded is not asked for
-    again. A trial that ended on an outage keeps its record but has no score.
+    again. The trial lists every model in that transcript. A trial that ended
+    on an outage keeps its record but has no score.
     """
     rdir = plate_source(source, case_id, seed)
     pack = _read(rdir / "evidence.json")
@@ -256,13 +271,9 @@ def review_plate(
         out_dir / "model_calls.jsonl",
         {"case": case_id, "seed": seed, "trial": 1, "prompt": prompt},
     )
+    transcript = Transcript(out_dir / "transcript.jsonl")
     review, info = review_round(
-        pack,
-        client,
-        decision.label,
-        Transcript(out_dir / "transcript.jsonl"),
-        scope="trial-01",
-        prompt=prompt,
+        pack, client, decision.label, transcript, scope="trial-01", prompt=prompt
     )
     outage = bool(info.get("outage"))
     named = review.suspected_faults if review else []
@@ -270,6 +281,9 @@ def review_plate(
         {
             "review": review.model_dump(mode="json") if review else None,
             "info": info,
+            # Every model that answered on this plate. info names only the last one, and a
+            # resumed trial can hold replies recorded in an earlier session.
+            "models": sorted({rec.get("model") or "" for rec in transcript.records}),
             "outage": outage,
             "score": None if outage else score(truth, named),
             "either": None if outage else score(truth, [*named_by["qc"], *named]),
@@ -311,14 +325,19 @@ def review_sweep(
     resume: str | Path | None = None,
     out_path: str | Path | None = None,
     command: str = COMMAND,
+    resume_args: list[str] | None = None,
 ) -> SweepResult:
     """Run the overwatch on every plate of a baseline sweep, once per plate, and write the page.
 
     cases selects and orders the cases to run (default: all, in the sweep's
     order). resume continues the run in that folder: its prompt and source are
     kept, plates done are not asked again, and cases given here are added to
-    the run's cases. The page goes to out_path, or to the prompt's default
-    page, which only a live client may write. Every check runs before
+    the run's cases. A resume must use the kind of client (live, scripted,
+    replay) that made the run, so a run never mixes a model's replies with
+    hand-written ones. The page goes to out_path, or to the prompt's default
+    page, which only a live client may write. resume_args are the options, in
+    page-safe form, that a resume needs to ask the same model and write the
+    same page; the page's resume command shows them. Every check runs before
     anything is written, and nothing is ever written under source. The page
     is written when at least one plate has been reviewed.
     """
@@ -336,7 +355,13 @@ def review_sweep(
                 f"{shown_path(path)} is inside the source {shown_path(source)}, "
                 "which this command only reads"
             )
-    session = {"command": command, "commit": git_commit(), "started": utc_now()}
+    session = {
+        "command": command,
+        "client": client_kind(client),
+        "resume_args": list(resume_args or []),
+        "commit": git_commit(),
+        "started": utc_now(),
+    }
     if resume is None:
         run = {
             "synthetic": True,
@@ -358,6 +383,12 @@ def review_sweep(
             )
         if run["sweep_cases"] != entries:
             raise ValueError(f"the sweep in {run['source']} changed since this run started")
+        made_with = run["sessions"][0].get("client", "unrecorded")
+        if made_with != session["client"]:
+            raise ValueError(
+                f"the run in {shown_path(run_dir)} was made with a {made_with} client, not a "
+                f"{session['client']} one; resume it with the same kind of client"
+            )
         order = order if cases else list(run["cases"])
         run["cases"] = [*run["cases"], *(c for c in order if c not in run["cases"])]
         run["sessions"].append(session)
@@ -390,7 +421,8 @@ def review_sweep(
         page = out_path
     total = sum(len(seeds[c]) for c in run["cases"])
     outages = sum(1 for t in trials if t["outage"])
-    return SweepResult(page, run_dir, total, reviewed, outages, stopped, asked)
+    models = answered_by(trials)
+    return SweepResult(page, run_dir, total, reviewed, outages, stopped, asked, models)
 
 
 def collect(run_dir: Path, run: dict) -> dict[str, list[dict]]:
@@ -501,7 +533,26 @@ def prompt_note(prompt: str) -> str:
 
 
 def _models(trials: list[dict]) -> list[str]:
-    return sorted({t["info"].get("model") or "" for t in trials if t["info"]["replies"]})
+    """Every model name in the trials' replies, scored or not. Empty names stay empty."""
+    return sorted({m for t in trials for m in t["models"]})
+
+
+def answered_by(trials: list[dict]) -> dict[str, int]:
+    """Each model that answered on the reviewed plates, with the number of plates it answered on."""
+    return dict(sorted(Counter(m for t in trials if not t["outage"] for m in t["models"]).items()))
+
+
+def mixed_note(models: dict[str, int], reviewed: int) -> str:
+    """The banner for a run whose reviewed plates were answered by more than one model."""
+    each = ", ".join(
+        f"{m or 'a client with no model name'} answered on {_n(k, 'plate')}"
+        for m, k in models.items()
+    )
+    return (
+        f"**This run mixes models. On its {_n(reviewed, 'reviewed plate')}, {each}. The {OW} "
+        "column and both pooled columns add up plates from every model, so the sentences on "
+        "what pooling added are left out.**"
+    )
 
 
 def how_to_read() -> list[str]:
@@ -549,17 +600,23 @@ def render(run_dir: str | Path) -> str:
     hard_plates = sum(len(cases[c]["seeds"]) for c in by_case if cases[c]["case"].get("hard"))
     reviewed, outages = tot["reviewed"], tot["outage"]
     untried = in_run - reviewed - outages
+    answered = answered_by(trials)
     lines = ["# Overwatch on the baseline sweep", ""]
     if "scripted" in models:
         lines += [SCRIPTED_BANNER, ""]
     elif any(m in NOT_A_MODEL for m in models):
         lines += [UNNAMED_BANNER, ""]
+    if len(answered) > 1:
+        lines += [mixed_note(answered, reviewed), ""]
     if reviewed < in_run:
+        again = " ".join(
+            [COMMAND, source, "--resume", shown_run, *run["sessions"][-1].get("resume_args", [])]
+        )
         lines += [
             f"**This run is not finished: the overwatch reviewed {_of(reviewed, in_run)} plates "
             f"in its cases. {outages} ended on an endpoint outage and {untried} "
             f"{'was' if untried == 1 else 'were'} not tried yet. Every column counts only the "
-            f"reviewed plates. `{COMMAND} {source} --resume {shown_run}` continues it.**",
+            f"reviewed plates. `{again}` continues it.**",
             "",
         ]
     resumed = [s["command"] for s in run["sessions"][1:]]
@@ -597,12 +654,18 @@ def render(run_dir: str | Path) -> str:
         "## What pooling added",
         "",
     ]
-    pooled = [pooled_sentence(tot, f"the {_n(reviewed, 'reviewed plate')}")]
     h = _counts(hard)
-    if h["reviewed"]:
-        pooled.append(pooled_sentence(h, f"the {_n(h['reviewed'], 'reviewed hard plate')}"))
-    elif hard_plates:
-        pooled.append("No hard plate has been reviewed yet.")
+    if len(answered) > 1:
+        pooled = [
+            "Left out: more than one model reviewed this run's plates (see the note at the top), "
+            "so a count of what pooling added would mix them."
+        ]
+    else:
+        pooled = [pooled_sentence(tot, f"the {_n(reviewed, 'reviewed plate')}")]
+        if h["reviewed"]:
+            pooled.append(pooled_sentence(h, f"the {_n(h['reviewed'], 'reviewed hard plate')}"))
+        elif hard_plates:
+            pooled.append("No hard plate has been reviewed yet.")
     lines += [" ".join(pooled), "", "## Per case", ""]
     lines += [
         "Plates reviewed: plates with a scored trial, of the case's plates in the sweep. Faults "

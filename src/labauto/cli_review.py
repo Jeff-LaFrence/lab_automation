@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 from pathlib import Path
 
 from labauto.record import utc_now
@@ -220,6 +221,7 @@ def cmd_eval_reviewer(args: argparse.Namespace) -> int:
         BASELINE_SEEDS,
         DEFAULT_OUTS,
         MAX_BASELINE_SEEDS,
+        SWEEP_OUTS,
         SWEEP_WORKERS,
         default_page,
         evaluate,
@@ -237,6 +239,10 @@ def cmd_eval_reviewer(args: argparse.Namespace) -> int:
     if args.client != "live" and page is not None:
         print(f"error: a {args.client.partition(':')[0]} client does not write {page}.")
         print("Pass --out <file> to write its page somewhere else.")
+        return EXIT_FAILED
+    sweep = default_page(out, SWEEP_OUTS.values())
+    if sweep is not None:
+        print(f"error: {sweep} is the eval-reviewer-sweep page. Pass another --out.")
         return EXIT_FAILED
     settings = _client_settings(args)
     if settings is None:
@@ -375,6 +381,7 @@ def cmd_eval_reviewer_sweep(args: argparse.Namespace) -> int:
             resume=args.resume,
             out_path=Path(out),
             command=command,
+            resume_args=same_client + same_out,
         )
     except ValueError as exc:
         print(f"error: {exc}")
@@ -385,9 +392,11 @@ def cmd_eval_reviewer_sweep(args: argparse.Namespace) -> int:
         print(f"No plate has been reviewed yet, so {out} was not written.")
     print(
         f"The overwatch has reviewed {result.reviewed} of {result.plates} plates in this run's "
-        f"cases ({result.asked} sent to the model now). Plates are under "
-        f"{shown_path(result.run_dir)}."
+        f"cases ({result.asked} sent to the model now). Plates are under {result.run_dir}."
     )
+    if len(result.models) > 1:
+        each = ", ".join(f"{m or 'no name'} on {k}" for m, k in result.models.items())
+        print(f"Warning: more than one model answered on the reviewed plates ({each}).")
     if result.stopped:
         print(f"The endpoint stopped answering {STOP_AFTER} times in a row, so the run stopped.")
     if result.reviewed < result.plates:
@@ -396,8 +405,13 @@ def cmd_eval_reviewer_sweep(args: argparse.Namespace) -> int:
             f"Not reviewed yet: {result.outages} ended on an outage, {untried} not tried. "
             "To resume:"
         )
-        resume = [COMMAND, shown_path(args.source), "--resume", shown_path(result.run_dir)]
-        print("  " + " ".join(resume + same_client + same_out))
+        # The terminal is never committed, so this line keeps the paths as they were
+        # typed, and it runs as printed.
+        resume = [str(args.source), "--resume", str(result.run_dir)]
+        resume += ["--model", args.model] if args.model else []
+        resume += ["--client", args.client] if args.client != "live" else []
+        resume += ["--out", args.out] if args.out is not None else []
+        print(f"  {COMMAND} {shlex.join(resume)}")
         return EXIT_NEEDS_PERSON
     return EXIT_OK
 

@@ -65,6 +65,8 @@ from labauto.review import (
 DEFAULT_OUT = "docs/reviewer_eval.md"
 # The page each prompt writes by default. Only a live client may write these.
 DEFAULT_OUTS = {"default": DEFAULT_OUT, "no_hints": "docs/reviewer_eval_no_hints.md"}
+# The default pages of eval-reviewer-sweep (reviewer_sweep.py). This command never writes them.
+SWEEP_OUTS = {"default": "docs/reviewer_sweep.md", "no_hints": "docs/reviewer_sweep_no_hints.md"}
 PROMPT_DIR = "src/labauto/agents/prompts"
 # The reviewers on the page, in column order, with the key each row stores their score under.
 QC, STATS = "QC rules", "QC plus statistics"
@@ -343,7 +345,7 @@ def evaluate(
 
     The page goes to out_path, or to the prompt's default page. Only a live
     client may write a default page: any other client raises ValueError before
-    a case is built. Raises NoModelAnswered, and writes no page, when the model
+    a case is built. No client may write an eval-reviewer-sweep page. Raises NoModelAnswered, and writes no page, when the model
     never replied. After the model's cases, baseline_sweep runs both baselines
     on baseline_seeds extra seeds per case (0 skips it), in up to workers
     processes. The sweep calls no model.
@@ -356,6 +358,9 @@ def evaluate(
     page = default_page(out_path)
     if page is not None and not isinstance(client, LiveClient):
         raise ValueError(f"only a live client writes {page}; give another out_path")
+    other = default_page(out_path, SWEEP_OUTS.values())
+    if other is not None:
+        raise ValueError(f"{other} is the eval-reviewer-sweep page; give another out_path")
     if cases is None or build is None:
         from labauto import paired
 
