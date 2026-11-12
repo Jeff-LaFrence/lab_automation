@@ -19,6 +19,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ConstantKernel, Matern, WhiteKernel
 
+from labauto.blas import one_blas_thread
 from labauto.decide.base import key, latin_hypercube, unit_scale, untested
 from labauto.models import Assay, Decision, History, Pick
 
@@ -51,14 +52,15 @@ class Optimizer:
             self.gp = GaussianProcessRegressor(
                 kernel=kernel, normalize_y=True, n_restarts_optimizer=1, random_state=seed
             )
-            with warnings.catch_warnings():
+            with warnings.catch_warnings(), one_blas_thread():
                 warnings.simplefilter("ignore", ConvergenceWarning)
                 self.gp.fit(x, y)
 
     def _predict(self, conds: list[dict[str, float]]) -> tuple[np.ndarray, np.ndarray]:
         if self.gp is None:
             return np.zeros(len(conds)), np.ones(len(conds))
-        return self.gp.predict(unit_scale(conds, self.assay), return_std=True)
+        with one_blas_thread():
+            return self.gp.predict(unit_scale(conds, self.assay), return_std=True)
 
     def suggest(self, n: int) -> list[dict]:
         """Up to 16 untested conditions by Thompson sampling, with predicted mean and sd.
@@ -78,7 +80,8 @@ class Optimizer:
             ]
         else:
             x = unit_scale(self.candidates, self.assay)
-            samples = self.gp.sample_y(x, n_samples=n, random_state=self.seed)
+            with one_blas_thread():
+                samples = self.gp.sample_y(x, n_samples=n, random_state=self.seed)
             chosen: list[int] = []
             for j in range(samples.shape[1]):
                 for idx in np.argsort(-samples[:, j]):

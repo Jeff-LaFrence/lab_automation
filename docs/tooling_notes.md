@@ -34,7 +34,8 @@ message for an unknown labware name also contains the word `KeyError`, so the
 
 The raw exception text includes Python tracebacks with absolute file paths.
 The message saved in `errors.json` keeps the simulator's own top level error
-text and replaces any absolute path with `<path>`.
+text and replaces any path under a home folder (`/home/`, `/Users/`, `/root/`,
+or `C:\Users\`) with `<path>`.
 
 ### What it misses
 
@@ -52,10 +53,12 @@ collisions beyond deck slot occupancy.
 
 ### Run log facts this project depends on
 
-The ledger (what was dispensed into each well) is read from the run log.
-`test_run_log_strings_are_stable` guards the text prefixes `Picking up tip`,
-`Aspirating`, and `Dispensing`. `test_ledger_equals_plan` checks that the
-ledger built from the log equals the plan for every well and reagent.
+The ledger (what was dispensed into each well) is read from the run log, by
+the text prefixes `Picking up tip`, `Aspirating`, and `Dispensing`.
+`test_run_log_strings_are_stable` checks that the first three steps start with
+the words `Picking`, `Aspirating`, and `Dispensing`; it does not check the rest
+of `Picking up tip`. `test_ledger_equals_plan` checks that the ledger built
+from the log equals the plan for every well and reagent.
 
 `transfer()` with a volume above the pipette's maximum is not an error in the
 simulator: it splits the volume into several aspirations. This project writes
@@ -145,4 +148,4 @@ equals the plan (`test_ledger_and_tracked_volumes_match_the_plan`).
 
 ## Ollama as the local endpoint
 
-Ollama serves an OpenAI-compatible API at `http://127.0.0.1:11434/v1`. To use it, set `LABAUTO_MAIN_BASE_URL` to that address and `LABAUTO_MAIN_MODEL` to the model's tag as `ollama list` shows it. Ollama accepts a JSON schema in `response_format` and enforces it with a grammar, so the planner's replies arrive as JSON with every key present.
+Ollama serves an OpenAI-compatible API at `http://127.0.0.1:11434/v1`. To use it, set `LABAUTO_MAIN_BASE_URL` to that address and `LABAUTO_MAIN_MODEL` to the model's tag as `ollama list` shows it. Ollama accepts a JSON schema in `response_format` and enforces it with a grammar, so the planner's replies arrive as JSON with every key present, and with only the assay's factor names as keys in `grid` and in each condition.

@@ -301,6 +301,7 @@ def _drive(run_dir: Path, st: RunState, clients: Clients, settings: Settings) ->
             transcript=transcript,
             meta={"scope": "planner", "attempt": number, "rung": rung},
             max_calls=max_calls,
+            assay=assay,
         )
         if rung == "hosted":
             st.hosted_calls = used + result.calls

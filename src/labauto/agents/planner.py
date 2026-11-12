@@ -7,6 +7,7 @@ design fields. Code fills ids, layout, and who wrote it (principle P1).
 
 from __future__ import annotations
 
+import copy
 import json
 from importlib import resources
 
@@ -169,11 +170,13 @@ def propose(
     transcript=None,
     meta: dict | None = None,
     max_calls: int = 2,
+    assay: Assay | None = None,
 ):
     """The planner slot: ask a model for one design. Returns a ChatResult whose
     parsed field is a PlannerOutput as a dict, or None with the reason in error.
 
-    Temperature is 0.3 for a first attempt and 0.1 for repairs.
+    Temperature is 0.3 for a first attempt and 0.1 for repairs. With an assay,
+    the schema sent to the server names its factors (reply_schema).
     """
     from labauto.agents.llm import chat
     from labauto.models import PlannerOutput
@@ -188,4 +191,46 @@ def propose(
         role="planner" if first else "repair",
         meta=meta,
         max_calls=max_calls,
+        wire=reply_schema(assay) if assay is not None else None,
     )
+
+
+def reply_schema(assay: Assay) -> dict:
+    """The planner's reply schema as sent to a server, with the assay's factor names.
+
+    The generic schema lets "grid" and each condition hold any key. A server
+    that turns the schema into a grammar then lets a model write a wrong
+    factor name: a live model's reasoning named base_equiv, but its JSON said
+    "encoding". Here "grid" and each condition list exactly the assay's
+    factors, each one required, and no other key. Values stay plain numbers:
+    whether a value is allowed is for the design rules to say, with a reason
+    the model can repair from. Replies are still validated against
+    PlannerOutput, so no rule changes.
+    """
+    from labauto.agents.llm import wire_schema
+    from labauto.models import PlannerOutput
+
+    names = list(assay.factors)
+    schema = PlannerOutput.model_json_schema()
+    design = schema["$defs"]["ModelDesign"]["properties"]
+
+    def named(value: dict) -> dict:
+        return {
+            "type": "object",
+            "properties": {name: copy.deepcopy(value) for name in names},
+            "required": list(names),
+            "additionalProperties": False,
+        }
+
+    def branch(prop: str, kind: str) -> dict:
+        found = [b for b in design[prop].get("anyOf", []) if b.get("type") == kind]
+        if len(found) != 1:
+            raise ValueError(f"the {prop} schema changed shape; reply_schema needs updating")
+        return found[0]
+
+    grid = branch("grid", "object")
+    value = grid.pop("additionalProperties")
+    grid.update(named(value))
+    items = branch("conditions", "array")["items"]
+    items.update(named(items.pop("additionalProperties")))
+    return wire_schema(schema)

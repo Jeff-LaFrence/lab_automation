@@ -198,7 +198,12 @@ class Transcript:
     def _key(rec: dict) -> tuple:
         return (rec.get("scope", ""), rec.get("attempt"), rec.get("call"))
 
-    def lookup(self, meta: dict, call: int) -> dict | None:
+    def lookup(self, meta: dict, call: int, messages: list[dict] | None = None) -> dict | None:
+        """The recorded line for this call, or None. messages is what the call would send.
+
+        This class does not check messages. A subclass may, to refuse a reply
+        that was recorded for another question.
+        """
         return self._cache.get((meta.get("scope", ""), meta.get("attempt"), call))
 
     def append(self, rec: dict) -> None:
@@ -233,20 +238,26 @@ def chat(
     meta: dict | None = None,
     max_calls: int = 2,
     text_only: bool = False,
+    wire: dict | None = None,
 ) -> ChatResult:
     """Ask for one JSON object. Retries once with the parse error appended.
 
     A second failure returns a ChatResult with parsed None and an error that
     starts with SCHEMA_INVALID. max_calls caps the calls (1 means no retry).
     With text_only, the reply is plain text: parsed is {"text": ...} with any
-    reasoning removed, and an empty reply counts as a failure.
+    reasoning removed, and an empty reply counts as a failure. wire, when
+    given, is the JSON schema sent to the server in place of the one built
+    from schema; the reply is still validated against schema.
     """
     meta = dict(meta or {})
-    json_schema = wire_schema(schema.model_json_schema()) if schema is not None else None
+    if wire is not None:
+        json_schema = wire
+    else:
+        json_schema = wire_schema(schema.model_json_schema()) if schema is not None else None
     convo = list(messages)
     total = ChatResult(endpoint_label=label)
     for call in range(1, max(1, max_calls) + 1):
-        recorded = transcript.lookup(meta, call) if transcript else None
+        recorded = transcript.lookup(meta, call, convo) if transcript else None
         if recorded is not None:
             raw = RawReply(
                 text=recorded["raw"],
@@ -282,6 +293,7 @@ def chat(
                         else None
                     ),
                     "messages": raw.sent_messages if raw.sent_messages is not None else convo,
+                    "schema_hash": schema_hash(json_schema),
                     "raw": raw.text,
                     "stop_reason": raw.stop_reason,
                     "reasoning": raw.reasoning,
@@ -341,6 +353,19 @@ def wire_schema(schema: dict) -> dict:
 
     walk(out)
     return out
+
+
+def schema_hash(schema: dict | None) -> str | None:
+    """A short name for a reply schema: the first 12 hex characters of its sha256.
+
+    Each transcript line keeps it. When the server enforces the schema, the
+    schema is not in the messages, so without it a recording could not show
+    which schema the model wrote under. Key order is kept, since a server
+    may build its grammar in that order. None means no schema was sent.
+    """
+    if schema is None:
+        return None
+    return hashlib.sha256(json.dumps(schema).encode("utf-8")).hexdigest()[:12]
 
 
 def schema_instruction(schema: dict) -> str:
