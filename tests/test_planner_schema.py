@@ -6,7 +6,7 @@ import json
 
 from conftest import ROOT
 
-from labauto.agents.llm import ScriptedClient, wire_schema
+from labauto.agents.llm import ScriptedClient, schema_hash, wire_schema
 from labauto.agents.planner import reply_schema
 from labauto.config import Settings, load_assay
 from labauto.models import PlannerOutput
@@ -79,6 +79,25 @@ def test_a_planner_run_sends_the_assays_schema(tmp_path):
     assert load_state(run).state == "AWAITING_APPROVAL"
     expected = reply_schema(load_assay(ASSAY))
     assert client.schemas and all(s == expected for s in client.schemas)
+
+
+def test_the_transcript_says_which_schema_a_planner_run_sent(tmp_path):
+    """A run under the factor-named schema can be told from one under the generic schema."""
+    replies = json.loads((ROOT / "examples" / "scripted" / "02_too_big.json").read_text())
+    request = (ROOT / "examples" / "requests" / "02_too_big.txt").read_text()
+    run = start_run(
+        request,
+        str(ASSAY),
+        str(WORKCELL),
+        Clients(local=ScriptedClient(replies)),
+        Settings(),
+        tmp_path,
+    )
+    lines = (run / "transcript.jsonl").read_text().splitlines()
+    hashes = {json.loads(line)["schema_hash"] for line in lines}
+    named = schema_hash(reply_schema(load_assay(ASSAY)))
+    assert hashes == {named}
+    assert named != schema_hash(wire_schema(PlannerOutput.model_json_schema()))
 
 
 def test_a_reply_that_breaks_the_grammar_is_still_checked(tmp_path):
