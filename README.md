@@ -307,24 +307,29 @@ What these show:
 - Two simple plate statistics, with no model, caught all 13 faults. Pooled with them, the overwatch added no fault and no faulty well on these plates. Those statistics were set with the hard-case recipes known, so they are a strong baseline here.
 - 12 cases with one trial each is a small test. One case more or less moves every count.
 
-The same reviewers then ran on 120 more plates: 10 more seeds for each of the 12 cases, one model trial per plate, default prompt only ([page](docs/reviewer_sweep.md)). `labauto eval-reviewer` had already built these plates and scored the fixed rules on them; `labauto eval-reviewer-sweep` reads the same stored evidence and adds the overwatch. The plates hold 130 true faults, 40 of them on the 30 hard plates, and 269 wells hold a failed injection or an impurity. This table counts plates with at least one false alarm, not false alarms.
+The same reviewers then ran on 120 more plates: 10 more seeds for each of the 12 cases, one model trial per plate, once with each prompt ([default prompt](docs/reviewer_sweep.md), [no hints](docs/reviewer_sweep_no_hints.md)). `labauto eval-reviewer` had already built these plates and scored the fixed rules on them; `labauto eval-reviewer-sweep` reads the same stored evidence and adds the overwatch. The plates hold 130 true faults, 40 of them on the 30 hard plates, and 269 wells hold a failed injection or an impurity. This table counts plates with at least one false alarm, not false alarms.
 
 | Reviewer | Faults caught | Hard-case faults caught | Plates with a false alarm | Faulty wells named |
 |---|---|---|---|---|
 | QC rules (code) | 92 of 130 | 2 of 40 | 2 of 120 | 114 of 269 |
 | QC plus statistics (code) | 124 of 130 | 34 of 40 | 4 of 120 | 202 of 269 |
 | Overwatch, default prompt | 115 of 130 | 25 of 40 | 8 of 120 | 131 of 269 |
-| QC plus statistics or overwatch | 130 of 130 | 40 of 40 | 10 of 120 | 211 of 269 |
+| Overwatch, no hints | 70 of 130 | 2 of 40 | 22 of 120 | 83 of 269 |
+| QC plus statistics or overwatch (default prompt) | 130 of 130 | 40 of 40 | 10 of 120 | 211 of 269 |
+| QC plus statistics or overwatch (no hints) | 124 of 130 | 34 of 40 | 24 of 120 | 202 of 269 |
 
 What these show:
 
-- The overwatch and QC plus statistics miss different hard faults. On the 20 hard plates with a mild LC/MS drift, the overwatch caught 19 and QC plus statistics 14. On the 20 with a subtle impurity, QC plus statistics caught 20 and the overwatch 6.
-- Pooled, they caught all 130 faults, including the 6 drifts QC plus statistics missed. The price was a false alarm on 6 more plates (10 of 120 against 4). Five of those were clean plates on which the overwatch called an LC/MS and NMR disagreement.
-- The overwatch named fewer faulty wells than QC plus statistics (131 against 202 of 269). Pooling added 9.
-- This used the default prompt, which describes how the hard faults look. On the 12 plates above, the prompt without that section caught none of the 4 hard faults. So the drift catches may come from the hints rather than from the model's own reading. The prompt without hints has not run on these plates (`--prompt no_hints`, about 6 hours).
-- The checks held over 10 times as many plates. Code sent back 66 replies, one each on 66 plates, because 134 of their reasons and summaries held numbers (248 in all) not found where the check allows. Each of those plates passed on its second attempt. 6 more replies held no complete JSON object and were asked again. All 120 plates ended with a valid review, after 192 model calls in about 6 hours.
+- With the default prompt, the overwatch and QC plus statistics miss different hard faults. On the 20 hard plates with a mild LC/MS drift, the overwatch caught 19 and QC plus statistics 14. On the 20 with a subtle impurity, QC plus statistics caught 20 and the overwatch 6.
+- Pooled with the default prompt overwatch, they caught all 130 faults, including the 6 drifts QC plus statistics missed. The price was a false alarm on 6 more plates (10 of 120 against 4). Five of those were clean plates on which the overwatch called an LC/MS and NMR disagreement.
+- Without the hint section, the overwatch caught 70 of 130 faults, fewer than the plain QC rules (92). It caught no fault on any plate that the plain QC rules missed. Of the 40 hard faults it caught 2, the same 2 the plain QC rules caught on the same plates. Pooled with QC plus statistics, it added no fault and no faulty well, and it added a false alarm on 20 plates (24 of 120 against 4).
+- On the 20 hard plates with a mild drift, code had marked some conditions as an LC/MS and NMR disagreement. Code does not let a review accept such a condition, so with either prompt the overwatch flagged them or asked for a rerun. Without the hints it named that disagreement as the fault on all 20 plates, which the scoring does not count as a catch, and it named a drift on 1. With the hints it named a drift on 19. So the drift catches with the default prompt came from the hints.
+- Without the hints it also missed faults the plain QC rules catch. On the 20 plates with a drift strong enough to fail the plate check, it named a drift on 8; with the hints, on 20. On 11 of the other 12 it described the LC/MS reference control failing the plate check, but named the fault other, not a drift. The scoring counts each of those as a missed drift and a false alarm. In all it caught 9 of 40 drifts (39 with the hints), 5 of 10 phase errors (10 with the hints), and 16 of 40 impurities (26 with the hints).
+- Its 22 plates with a false alarm break down as follows. On 16 it named a fault of kind other, 11 of them the strong drifts above. On 4 clean plates it called an LC/MS and NMR disagreement. On 2 plates with an impurity it named broadened NMR lines.
+- The overwatch named fewer faulty wells than QC plus statistics: 131 of 269 with the hints and 83 without, against 202. Pooling added 9 with the hints and none without.
+- The checks held in both runs. With the default prompt, code sent back 66 replies, one each on 66 plates, because 134 of their reasons and summaries held numbers (248 in all) not found where the check allows. Each of those plates passed on its second attempt. Without the hints, code sent back 72 replies on 71 plates, because 175 reasons and summaries held such numbers (288 in all). One of those replies also had 6 conditions that cited no path under the condition or its wells. One plate passed on its third attempt and the rest on their second. 6 more replies with the default prompt and 1 without held no complete JSON object and were asked again. All 120 plates ended with a valid review in both runs. The default prompt took 192 model calls in about 6 hours. The prompt without hints took 193 calls in about 5 hours.
 
-So a model's review can be held to the numbers in the evidence. With a prompt that describes the faults, the overwatch caught drifts that two fixed statistics missed, at the price of more false alarms. It has not shown that it does this without that description.
+So a model's review can be held to the numbers in the evidence. With a prompt that describes the faults, the overwatch caught drifts that two fixed statistics missed, at the price of more false alarms. Without that description, it caught no fault that the plain QC rules missed, and it caught fewer faults than those rules (70 against 92). On these plates the model found hard faults that the plain QC rules miss only when its prompt described them.
 
 ## The planner and the ladder
 
@@ -365,7 +370,7 @@ Commands: `labauto plan "<request>"`, `labauto status <run>`, `labauto approve <
 | Planner agent, repair, escalation, approval | built and tested; run live on a local model (qwen3.8:27b through Ollama) on three test sets, results under [Results](#results); the hosted rung has not run live (no hosted model configured) |
 | LC/MS readout | simulated, synthetic data |
 | NMR readout and spectrum evaluator | simulated, synthetic spectra; the evaluator is classical least squares, tested on synthetic spectra only ([docs/nmr.md](docs/nmr.md)) |
-| Pairing and data reviewer (overwatch) | built and tested; run live on qwen3.8:27b on 12 synthetic fault cases, one trial each, with and without its hint section; it caught 12 and 8 of 13 faults, and two fixed statistics rules caught 13. On 120 more plates, with the hint section only, it caught 115 of 130 faults against the statistics' 124, and 130 pooled with them ([results](#paired-lcms-and-nmr-and-a-data-reviewer)) |
+| Pairing and data reviewer (overwatch) | built and tested; run live on qwen3.8:27b on 12 synthetic fault cases, one trial each, with and without its hint section; it caught 12 and 8 of 13 faults, and two fixed statistics rules caught 13. On 120 more plates it caught 115 of 130 faults with the hint section and 70 without it, against the statistics' 124. Pooled with the statistics it caught 130 with the hint section. Without it, pooling added no fault, only false alarms (24 of 120 plates against 4) ([results](#paired-lcms-and-nmr-and-a-data-reviewer)) |
 | Closed loop | built, simulated |
 | Model decider, report model note | built and tested; run live on qwen3.8:27b in one 6-round campaign (replayed in the demo) and in the benchmark on 10 surfaces, where it did not beat the optimizer |
 | Service API, skill library | not built |
@@ -477,7 +482,7 @@ Nothing upstream changes: the design, plan, and worklist are vendor neutral.
 - Plates and tips are assumed fresh each round, and reagents topped up between rounds.
 - No scheduler, no multi-instrument coordination, no sample tracking system.
 - Results depend on the model. The planner evaluation covers two local models (the second on the core set only), three test sets, and 5 trials per request; the model decider ran live in one campaign and on 10 benchmark surfaces. The test sets were drafted by the same AI assistant that built the planner and reviewed by the owner; a test set written by someone outside would be a stronger test.
-- The NMR spectra are synthetic, and the fitter models them with the same line shapes the simulator uses, so its accuracy is a lower bound on what real spectra would give. The data reviewer evaluation has 12 fault cases, each on one seed with one model trial, and 120 more plates with one model trial each, run with the default prompt only.
+- The NMR spectra are synthetic, and the fitter models them with the same line shapes the simulator uses, so its accuracy is a lower bound on what real spectra would give. The data reviewer evaluation has 12 fault cases, each on one seed with one model trial, and 120 more plates with one model trial per plate for each prompt.
 
 ## What real hardware would add
 
@@ -502,7 +507,7 @@ Designed and directed by the repository owner. The code was written with an AI c
 - [docs/planner_eval.md](docs/planner_eval.md) and the other `docs/planner_eval_*.md` pages: the planner evaluations, generated by `labauto eval-planner`.
 - [docs/nmr.md](docs/nmr.md): the simulated NMR and the spectrum evaluator, measured against known answers, generated by `labauto nmr-check`.
 - [docs/reviewer_eval.md](docs/reviewer_eval.md) and [docs/reviewer_eval_no_hints.md](docs/reviewer_eval_no_hints.md): the data reviewer against injected faults, generated by `labauto eval-reviewer`.
-- [docs/reviewer_sweep.md](docs/reviewer_sweep.md): the data reviewer on the 120 plates of the baseline sweep, generated by `labauto eval-reviewer-sweep`.
+- [docs/reviewer_sweep.md](docs/reviewer_sweep.md) and [docs/reviewer_sweep_no_hints.md](docs/reviewer_sweep_no_hints.md): the data reviewer on the 120 plates of the baseline sweep, generated by `labauto eval-reviewer-sweep`.
 - [docs/decisions.md](docs/decisions.md): choices made where the specification was silent, and open problems.
 
 ## Background
